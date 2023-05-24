@@ -1,0 +1,15 @@
+{% extends "root.html" %}
+
+{% block title %}{{ title }} - Blog name{% endblock %}
+
+{% block content %}
+  <div class="flex flex-col items-center">
+    <article class='prose my-8'>
+      <h1>
+        {{ title }}
+      </h1>
+      {{ content }}
+    </article>
+  <div>
+{% endblock %}
+

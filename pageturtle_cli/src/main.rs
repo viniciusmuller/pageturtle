@@ -1,6 +1,6 @@
 use std::{
     fs,
-    path::{Path, PathBuf}, rc::Rc, borrow::Borrow
+    path::{Path, PathBuf}
 };
 
 use comrak::{
@@ -42,7 +42,7 @@ fn main() {
     let allowed_filetypes = vec!["md", "markdown"];
     let mut posts: Vec<BlogPost> = vec![];
     let mut failures: Vec<BuildPostError> = vec![];
-    let blog_path = "blog_template/posts";
+    let blog_path = "pageturtle_cli/blog_template/posts";
     let output_target = "dist";
 
     let walker = WalkDir::new(blog_path).min_depth(1).into_iter();
@@ -62,7 +62,7 @@ fn main() {
             None => continue,
         }
 
-        let content = fs::read_to_string(&filepath).unwrap();
+        let content = fs::read_to_string(filepath).unwrap();
 
         match build_blog_post(&content, &compiler) {
             Ok(post) => posts.push(post),
@@ -101,10 +101,12 @@ fn main() {
     fs::write(path, index_html).unwrap();
 
     for post in &publishable_posts {
-        let path = output_dir.join(post.filename.to_owned());
+        let path = output_dir.join(&post.filename);
         println!("writing file {:?}", path);
-        fs::write(path, post.rendered_html.to_owned()).unwrap();
+        fs::write(path, &post.rendered_html).unwrap();
     };
+
+    fs::write(output_dir.join("styles.css"), pageturtle_core::stylesheet()).unwrap();
 
     dbg!(failures);
 }
@@ -116,14 +118,14 @@ where
     Ok(())
 }
 
-fn create_posts<'a, I>(output_dir: &Path, posts: &'a I) -> Result<(), String>
+fn create_posts<'a, I>(_output_dir: &Path, _posts: &'a I) -> Result<(), String>
 where
     I: Iterator<Item = PublishableBlogPost<'a>>,
 {
     Ok(())
 }
 
-fn create_index_page<'a, I>(output_dir: &Path, posts: &'a I)
+fn create_index_page<'a, I>(_output_dir: &Path, _posts: &'a I)
 where
     I: Iterator<Item = PublishableBlogPost<'a>>,
 {

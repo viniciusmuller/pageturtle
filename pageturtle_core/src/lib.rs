@@ -7,14 +7,14 @@ use slug::slugify;
 use std::{
     borrow::Borrow,
     cell::RefCell,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, fs,
 };
 
-use comrak::plugins::syntect::SyntectAdapter;
+
 use comrak::{
     arena_tree::Node,
     nodes::{Ast, AstNode},
-    Arena, ComrakExtensionOptions, ComrakOptions, ComrakPlugins,
+    Arena, ComrakOptions, ComrakPlugins,
 };
 
 #[derive(Template)]
@@ -39,6 +39,7 @@ struct IndexTemplate<'a> {
 pub struct BlogPostMetadata {
     title: String,
     slug: Option<String>,
+    description: Option<String>,
     #[serde(with = "date")]
     date: DateTime<Utc>,
     tags: Option<Vec<String>>,
@@ -51,7 +52,7 @@ pub struct PostCompiler<'a> {
 }
 
 impl<'a> PostCompiler<'a> {
-    pub fn new<'b>(
+    pub fn new(
         arena: Arena<AstNode<'a>>,
         options: &'a ComrakOptions,
         plugins: &'a ComrakPlugins<'a>,
@@ -75,11 +76,15 @@ impl<'a> PostCompiler<'a> {
     }
 }
 
+pub fn stylesheet() -> String {
+    fs::read_to_string("./pageturtle_core/templates/styles.css").unwrap()
+}
+
 mod date {
     use chrono::{DateTime, TimeZone, Utc};
     use serde::{self, Deserialize, Deserializer};
 
-    const FORMAT: &'static str = "%Y-%m-%dT%H:%M:%SZ";
+    const FORMAT: &str = "%Y-%m-%dT%H:%M:%SZ";
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
     where
@@ -102,6 +107,7 @@ pub struct BlogPost<'a> {
 pub struct PublishableBlogPost<'a> {
     pub post: &'a BlogPost<'a>,
     pub filename: PathBuf,
+    pub description: String,
     pub rendered_html: String,
 }
 
@@ -125,9 +131,15 @@ pub fn prepare_for_publish<'a>(
     };
     let filename = Path::new(&filename).with_extension("html");
 
+    let description = match p.metadata.description {
+        Some(ref d) => d.to_owned(),
+        None => "oh no".to_string()
+    };
+
     PublishableBlogPost {
         post: p,
         filename,
+        description,
         rendered_html: html_document,
     }
 }
@@ -158,7 +170,7 @@ pub fn build_blog_post<'a>(
 
 fn render_post_page<'a>(p: &'a BlogPost<'a>, compiler: &'a PostCompiler<'a>) -> String {
     let rendered_html = compiler.ast_to_html(p.ast);
-    let base_url = "/home/vini/projects/rust/personal/pageturtle/pageturtle_cli/dist";
+    let base_url = "/home/vini/projects/rust/personal/pageturtle/dist";
 
     PostTemplate {
         title: &p.metadata.title,
@@ -173,7 +185,7 @@ pub fn render_index<'a>(posts: &'a Vec<PublishableBlogPost<'a>>) -> String {
     // TODO: get summary from posts (maybe first AST text nodes) ?
     // let iter = posts.into_iter();
 
-    let base_url = "/home/vini/projects/rust/personal/pageturtle/pageturtle_cli/dist";
+    let base_url = "/home/vini/projects/rust/personal/pageturtle/dist";
     IndexTemplate { posts, title: "Welcome to the blog", base_url }
     .render()
     .unwrap()
@@ -202,13 +214,9 @@ fn parse_frontmatter<'a>(ast: &'a Node<'a, RefCell<Ast>>) -> Result<BlogPostMeta
 }
 
 fn parse_frontmatter_yaml(s: &str) -> Result<BlogPostMetadata, String> {
-    let unprefixed = unquote_frontmatter(s);
-    match serde_yaml::from_str::<BlogPostMetadata>(&unprefixed) {
+    let unquoted = s.replace("---", "");
+    match serde_yaml::from_str::<BlogPostMetadata>(&unquoted) {
         Ok(settings) => Ok(settings),
         Err(e) => Err(e.to_string()),
     }
-}
-
-fn unquote_frontmatter(fm: &str) -> String {
-    fm.replace("---", "")
 }

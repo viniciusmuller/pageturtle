@@ -1,0 +1,21 @@
+{% extends "root.html" %}
+
+{% block title %}Blog name{% endblock %}
+
+{% block content %}
+  <div>
+    <h1 class="text-4xl font-bold">Posts</h1>
+    <ul class="mt-4 space-y-4 w-fit">
+      {% for p in posts %}
+       <li class="p-2 border border-gray-800 rounded-md">
+         <a class="font-bold" href="{{ base_url }}/{{ p.filename.display() }}">
+           {{ p.post.metadata.title }}
+         </a>
+         <p>
+           {{ p.description }}
+         </p>
+       </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endblock %}
