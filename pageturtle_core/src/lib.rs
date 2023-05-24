@@ -21,7 +21,7 @@ use comrak::{
 #[template(path = "post.html", escape = "none")]
 struct PostTemplate<'a> {
     // TODO: compose templates
-    base_url: &'a str,
+    config: &'a BlogConfiguration,
     title: &'a str,
     content: &'a str,
 }
@@ -30,9 +30,29 @@ struct PostTemplate<'a> {
 #[template(path = "index.html", escape = "none")]
 struct IndexTemplate<'a> {
     // TODO: compose templates
-    base_url: &'a str,
-    title: &'a str,
+    config: &'a BlogConfiguration,
     posts: &'a Vec<PublishableBlogPost<'a>>
+}
+
+#[derive(Deserialize)]
+pub struct Link {
+    name: String,
+    href: String
+}
+
+#[derive(Deserialize)]
+pub struct BlogConfiguration {
+    pub blog_title: String,
+    #[serde(default)]
+    pub base_url: String,
+    #[serde(default="default_true")]
+    pub enable_rss: bool,
+    pub extra_links_start: Option<Vec<Link>>,
+    pub extra_links_end: Option<Vec<Link>>
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Deserialize)]
@@ -44,7 +64,6 @@ pub struct BlogPostMetadata {
     pub date: DateTime<Utc>,
     pub tags: Option<Vec<String>>,
 }
-
 
 impl BlogPostMetadata {
     fn format_date(&self) -> String {
@@ -68,6 +87,11 @@ pub struct PostCompiler<'a> {
     arena: Arena<AstNode<'a>>,
     options: &'a ComrakOptions,
     plugins: &'a ComrakPlugins<'a>,
+}
+
+pub fn parse_config(content: &str) -> Result<BlogConfiguration, toml::de::Error> {
+    let config = toml::from_str(content)?;
+    Ok(config)
 }
 
 impl<'a> PostCompiler<'a> {
@@ -141,8 +165,9 @@ pub struct CompilePostError {
 pub fn prepare_for_publish<'a>(
     p: &'a BlogPost<'a>,
     compiler: &'a PostCompiler<'a>,
+    config: &BlogConfiguration
 ) -> PublishableBlogPost<'a> {
-    let html_document = render_post_page(p, compiler);
+    let html_document = render_post_page(p, compiler, config);
     let metadata = &p.metadata;
     let filename = match metadata.slug {
         Some(ref s) => slugify(s),
@@ -187,22 +212,20 @@ pub fn build_blog_post<'a>(
     })
 }
 
-fn render_post_page<'a>(p: &'a BlogPost<'a>, compiler: &'a PostCompiler<'a>) -> String {
+fn render_post_page<'a>(p: &'a BlogPost<'a>, compiler: &'a PostCompiler<'a>, config: &BlogConfiguration) -> String {
     let rendered_html = compiler.ast_to_html(p.ast);
-    let base_url = "/home/vini/projects/rust/personal/pageturtle/dist";
 
     PostTemplate {
         title: &p.metadata.title,
         content: &rendered_html,
-        base_url
+        config
     }
     .render()
     .unwrap()
 }
 
-pub fn render_index<'a>(posts: &'a Vec<PublishableBlogPost<'a>>) -> String {
-    let base_url = "/home/vini/projects/rust/personal/pageturtle/dist";
-    IndexTemplate { posts, title: "Welcome to the blog", base_url }
+pub fn render_index<'a>(posts: &'a Vec<PublishableBlogPost<'a>>, config: &'a BlogConfiguration) -> String {
+    IndexTemplate { posts, config, }
     .render()
     .unwrap()
 }

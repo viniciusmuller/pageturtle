@@ -7,7 +7,7 @@ use comrak::{
     plugins::syntect::SyntectAdapter, Arena, ComrakExtensionOptions, ComrakOptions, ComrakPlugins,
 };
 use pageturtle_core::{
-    build_blog_post, prepare_for_publish, BlogPost, PostCompiler, PublishableBlogPost, render_index,
+    build_blog_post, prepare_for_publish, BlogPost, PostCompiler, PublishableBlogPost, render_index, parse_config,
 };
 use walkdir::WalkDir;
 
@@ -42,10 +42,14 @@ fn main() {
     let allowed_filetypes = vec!["md", "markdown"];
     let mut posts: Vec<BlogPost> = vec![];
     let mut failures: Vec<BuildPostError> = vec![];
-    let blog_path = "pageturtle_cli/blog_template/posts";
+    let blog_path = Path::new("pageturtle_cli/blog_template");
+    let posts_dir = blog_path.join("posts");
     let output_target = "dist";
 
-    let walker = WalkDir::new(blog_path).min_depth(1).into_iter();
+    let config_file = fs::read_to_string(blog_path.join("config.toml")).unwrap();
+    let config = parse_config(&config_file).unwrap();
+
+    let walker = WalkDir::new(posts_dir).into_iter();
     for entry in walker {
         let entry = entry.unwrap();
         if entry.file_type().is_dir() {
@@ -84,7 +88,7 @@ fn main() {
 
     let mut publishable_posts: Vec<PublishableBlogPost> = posts
         .iter()
-        .map(|p| prepare_for_publish(p, &compiler))
+        .map(|p| prepare_for_publish(p, &compiler, &config))
         .collect();
 
     publishable_posts.sort_by(|a, b| b.post.metadata.date.cmp(&a.post.metadata.date));
@@ -99,7 +103,7 @@ fn main() {
 
     // create index page
     // let posts_iter = &boxed_posts.iter();
-    let index_html = render_index(&publishable_posts);
+    let index_html = render_index(&publishable_posts, &config);
     let path = output_dir.join("index.html");
     fs::write(path, index_html).unwrap();
 

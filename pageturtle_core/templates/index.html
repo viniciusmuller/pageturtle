@@ -1,40 +1,47 @@
 {% extends "root.html" %}
 
-{% block title %}Blog name{% endblock %}
+{% block title %}{{ config.blog_title }}{% endblock %}
 
 {% block content %}
   <div class="flex justify-center">
-    <ul class="mt-4 space-y-4 w-[40vw]">
-      {% for p in posts %}
-      <div class="p-2 rounded-md hover:bg-gray-100">
-         <a href="{{ base_url }}/{{ p.filename.display() }}">
-           <li>
-             <span class="text-xl font-bold">{{ p.post.metadata.title }}</span>
+    <div class="w-[40vw]">
+      <h1 class="text-4xl font-bold">
+        {{ config.blog_title }}
+      </h1>
 
-             <p>
-               <!-- TODO: humanize date -->
-               {{ p.post.metadata.format_date() }}
-             </p>
-             <p>
-               {{ p.description }}
-             </p>
+      <hr class="mt-8 mb-4" />
 
-             {% match p.post.metadata.tags %}
-              {% when Some with (tags) %}
-                <div class="space-x-2 my-1">
-                  {% for tag in tags %}
-                    <span class="px-2 py-1 bg-gray-300 rounded-md">
-                      {{ tag }}
-                    </span>
-                  {% endfor %}
-                </div>
-              {% when None %}
-             {% endmatch %}
+      <ul class="space-y-4 w-full">
+        {% for p in posts %}
+        <div class="p-2 rounded-md hover:bg-gray-100">
+           <a href="{{ config.base_url }}/{{ p.filename.display() }}">
+             <li>
+               <span class="text-xl font-bold">{{ p.post.metadata.title }}</span>
 
-           </li>
-         </a>
-      </div>
-      {% endfor %}
-    </ul>
+               <p>
+                 {{ p.post.metadata.format_date() }}
+               </p>
+               <p>
+                 {{ p.description }}
+               </p>
+
+               {% match p.post.metadata.tags %}
+                {% when Some with (tags) %}
+                  <div class="space-x-2 my-1">
+                    {% for tag in tags %}
+                      <span class="px-2 py-1 bg-gray-300 rounded-md">
+                        {{ tag }}
+                      </span>
+                    {% endfor %}
+                  </div>
+                {% when None %}
+               {% endmatch %}
+
+             </li>
+           </a>
+        </div>
+        {% endfor %}
+      </ul>
+    </div>
   </div>
 {% endblock %}

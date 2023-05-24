@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
-  <title>{% block title %}{{ title }} - My Site{% endblock %}</title>
+  <title>{% block title %}{{ title }} - {{ config.blog_title }}{% endblock %}</title>
 
   <head>
-    <link rel="stylesheet" href="{{ base_url }}/styles.css"></link>
+    <link rel="stylesheet" href="{{ config.base_url }}/styles.css"></link>
     {% block head %}{% endblock %}
   </head>
 
@@ -11,17 +11,34 @@
     <nav class="bg-gray-300 w-full px-4 py-2">
       <div class="w-full flex">
           <div class="flex mr-auto space-x-6">
-            <a class="text-black underline" href="{{ base_url }}/index.html">Home</a>
-            <a class="text-black underline" href="{{ base_url }}/index.html">Tags</a>
+            <a class="text-black underline" href="{{ config.base_url }}/index.html">Home</a>
+            <a class="text-black underline" href="{{ config.base_url }}/index.html">Tags</a>
+
             <button>
               Search
             </button>
-            <a class="text-black underline" href="{{ base_url }}/index.html">About</a>
+
+            {% match config.extra_links_start %}
+              {% when Some with (links) %}
+                {% for link in links %}
+                  <a class="text-black underline" href="{{ link.href }}">{{ link.name }}</a>
+                {% endfor %}
+              {% when None %}
+            {% endmatch %}
           </div>
 
           <div class="flex space-x-6">
-            <a class="text-black underline" href="{{ base_url }}/index.html">RSS</a>
-            <a class="text-black underline" href="{{ base_url }}/index.html">GitHub</a>
+            {% match config.extra_links_end %}
+              {% when Some with (links) %}
+                {% for link in links %}
+                  <a class="text-black underline" href="{{ link.href }}">{{ link.name }}</a>
+                {% endfor %}
+              {% when None %}
+            {% endmatch %}
+
+            {% if config.enable_rss %}
+              <a class="text-black underline" href="{{ config.base_url }}/index.html">RSS</a>
+            {% endif %}
           </div>
         </div>
       </div>
