@@ -82,10 +82,13 @@ fn main() {
         fs::create_dir_all(output_dir).unwrap();
     }
 
-    let publishable_posts: Vec<PublishableBlogPost> = posts
+    let mut publishable_posts: Vec<PublishableBlogPost> = posts
         .iter()
         .map(|p| prepare_for_publish(p, &compiler))
         .collect();
+
+    publishable_posts.sort_by(|a, b| b.post.metadata.date.cmp(&a.post.metadata.date));
+
     // let arc_posts = Rc::new(publishable_posts);
 
     // create_search_index(&publishable_posts).unwrap(); // TODO: handle (create error type for file

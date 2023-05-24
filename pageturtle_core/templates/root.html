@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <title>{% block title %}{{ title }} - My Site{% endblock %}</title>
+
+  <head>
+    <link rel="stylesheet" href="{{ base_url }}/styles.css"></link>
+    {% block head %}{% endblock %}
+  </head>
+
+  <body>
+    <nav class="bg-gray-300 w-full px-4 py-2">
+      <div class="w-full flex">
+          <div class="flex mr-auto space-x-6">
+            <a class="text-black underline" href="{{ base_url }}/index.html">Home</a>
+            <a class="text-black underline" href="{{ base_url }}/index.html">Tags</a>
+            <button>
+              Search
+            </button>
+            <a class="text-black underline" href="{{ base_url }}/index.html">About</a>
+          </div>
+
+          <div class="flex space-x-6">
+            <a class="text-black underline" href="{{ base_url }}/index.html">RSS</a>
+            <a class="text-black underline" href="{{ base_url }}/index.html">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+    <main class='p-4'>
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

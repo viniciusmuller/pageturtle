@@ -1,7 +1,7 @@
 // TODO: modularize
 // TODO: move core to another crate and leave this just as a CLI app
 use askama::Template; // bring trait in scope
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Timelike, Datelike};
 use serde::Deserialize;
 use slug::slugify;
 use std::{
@@ -37,12 +37,31 @@ struct IndexTemplate<'a> {
 
 #[derive(Debug, Deserialize)]
 pub struct BlogPostMetadata {
-    title: String,
-    slug: Option<String>,
-    description: Option<String>,
+    pub title: String,
+    pub slug: Option<String>,
+    pub description: Option<String>,
     #[serde(with = "date")]
-    date: DateTime<Utc>,
-    tags: Option<Vec<String>>,
+    pub date: DateTime<Utc>,
+    pub tags: Option<Vec<String>>,
+}
+
+
+impl BlogPostMetadata {
+    fn format_date(&self) -> String {
+        let date = self.date;
+        let (_is_common_era, year) = date.year_ce();
+        let hour = date.hour();
+
+        format!(
+            "{}, {}/{:02}/{:02}, {:02}:{:02}",
+            date.weekday(),
+            year,
+            date.month(),
+            date.day(),
+            hour,
+            date.minute(),
+        )
+    }
 }
 
 pub struct PostCompiler<'a> {
@@ -77,7 +96,7 @@ impl<'a> PostCompiler<'a> {
 }
 
 pub fn stylesheet() -> String {
-    fs::read_to_string("./pageturtle_core/templates/styles.css").unwrap()
+    fs::read_to_string("./pageturtle_core/assets/styles.css").unwrap()
 }
 
 mod date {
@@ -182,9 +201,6 @@ fn render_post_page<'a>(p: &'a BlogPost<'a>, compiler: &'a PostCompiler<'a>) -> 
 }
 
 pub fn render_index<'a>(posts: &'a Vec<PublishableBlogPost<'a>>) -> String {
-    // TODO: get summary from posts (maybe first AST text nodes) ?
-    // let iter = posts.into_iter();
-
     let base_url = "/home/vini/projects/rust/personal/pageturtle/dist";
     IndexTemplate { posts, title: "Welcome to the blog", base_url }
     .render()
