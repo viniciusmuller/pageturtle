@@ -1,0 +1,26 @@
+<html>
+  <title>
+    {{ title }}
+  </title>
+
+  <head>
+    <script src='https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp'></script>
+  </head>
+
+  <body>
+    <main class='flex flex-col items-center'>
+      <nav class="bg-gray-900 w-full px-4 py-2">
+        <div class="w-full flex justify-start">
+          <a class="underline" href="{{ base_url }}/index.html">Index</a>
+        </div>
+      </nav>
+
+      <article class='prose my-8'>
+        <h1>
+          {{ title }}
+        </h1>
+        {{ content }}
+      </article>
+    </main>
+  </body>
+</html>
