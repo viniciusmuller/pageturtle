@@ -6,10 +6,7 @@ use std::{
 use comrak::{
     plugins::syntect::SyntectAdapter, Arena, ComrakExtensionOptions, ComrakOptions, ComrakPlugins,
 };
-use pageturtle_core::{
-    build_blog_post, parse_config, prepare_for_publish, render_index, render_post_page,
-    render_tags_page, BlogPost, PostCompiler, PublishableBlogPost,
-};
+use pageturtle_core::{blog::{BlogPost, PostCompiler, build_blog_post, PublishableBlogPost, prepare_for_publish, self, BlogConfiguration}, rendering, self, feed};
 use walkdir::WalkDir;
 
 #[derive(Debug)]
@@ -48,7 +45,7 @@ fn main() {
     let output_target = "dist";
 
     let config_file = fs::read_to_string(blog_path.join("config.toml")).unwrap();
-    let config = parse_config(&config_file).unwrap();
+    let config = BlogConfiguration::from_toml(&config_file).unwrap();
 
     let walker = WalkDir::new(posts_dir).into_iter();
     for entry in walker {
@@ -95,22 +92,30 @@ fn main() {
     publishable_posts.sort_by(|a, b| b.post.metadata.date.cmp(&a.post.metadata.date));
 
     // create index page
-    let index_html = render_index(&publishable_posts, &config);
+    let index_html = rendering::render_index(&publishable_posts, &config);
     let path = output_dir.join("index.html");
     fs::write(path, index_html).unwrap();
 
-    let tags_html = render_tags_page(&posts, &config);
+    // create tags page
+    let tags_html = rendering::render_tags_page(&posts, &config);
     let tags_path = output_dir.join("tags.html");
     fs::write(tags_path, tags_html).unwrap();
 
+    // write posts
     for post in &publishable_posts {
         let path = output_dir.join(&post.filename);
         println!("writing file {:?}", path);
-        let page = render_post_page(post, &config);
+        let page = rendering::render_post_page(post, &config);
         fs::write(path, page).unwrap();
     }
 
-    fs::write(output_dir.join("styles.css"), pageturtle_core::stylesheet()).unwrap();
+    // write rss feed
+    if config.enable_rss {
+        let feed = feed::build_feed(&publishable_posts, &config);
+        fs::write(output_dir.join("feed.xml"), feed).unwrap();
+    }
+
+    fs::write(output_dir.join("styles.css"), rendering::stylesheet()).unwrap();
 
     dbg!(failures);
 }
