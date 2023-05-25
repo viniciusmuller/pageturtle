@@ -8,6 +8,16 @@
   </head>
 
   <body>
+    {% if config.is_dev_server %}
+      <script>
+         var socket = new WebSocket("ws://localhost:7000/ws", "handshake");
+
+         socket.onmessage = function(event) {
+           console.log(event);
+           location.reload();
+         }
+      </script>
+    {% endif %}
     <nav class="bg-gray-200 w-full px-4 py-2">
       <div class="w-full flex">
           <div class="flex mr-auto space-x-6">

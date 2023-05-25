@@ -11,3 +11,5 @@ walkdir = "2.3.3"
 comrak = "0.18.0"
 pageturtle_core = { path = "../pageturtle_core" }
 rouille = "3.6.2"
+notify = "6.0.0"
+crossbeam-channel = "0.5.8"

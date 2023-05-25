@@ -4,4 +4,5 @@
 - [ ] Great CLI interface
 - [ ] Nice error messages
 - [ ] Automatically build table of contents
-- [ ] Development server and live reload
+- [X] Development server and live reload
+- [ ] Incremental compilation on development server

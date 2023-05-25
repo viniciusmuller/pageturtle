@@ -57,6 +57,10 @@ pub struct BlogConfiguration {
 
     pub extra_links_start: Option<Vec<Link>>,
     pub extra_links_end: Option<Vec<Link>>,
+
+    // Used for adding live reload support in the templates
+    #[serde(default)]
+    pub is_dev_server: bool,
 }
 
 impl BlogConfiguration {
