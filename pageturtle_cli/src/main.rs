@@ -210,6 +210,8 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
         fs::write(output_dir.join("atom.xml"), feed_xml).unwrap();
     }
 
+    dbg!(&failures);
+
     fs::write(output_dir.join("styles.css"), rendering::stylesheet()).unwrap();
 }
 
@@ -284,7 +286,10 @@ fn start_dev_server(port: u32, blog_root: &Path, output_directory: &Path) {
                             let path = paths.first().unwrap();
                             if let Some(ext) = path.extension() {
                                 if check_allowed_filetype(ext.to_str().unwrap()) {
+                                    let start = Instant::now();
                                     build(&root, &output, &config);
+                                    let duration = start.elapsed();
+                                    println!("[rebuilt] {:?}", duration);
                                     changes_tx.send(path.clone()).unwrap();
                                 }
                             }

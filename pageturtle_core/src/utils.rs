@@ -1,19 +1,18 @@
 pub mod date {
-    use chrono::{NaiveDate, TimeZone, Utc};
+    use chrono::NaiveDate;
     use serde::{self, Deserialize, Deserializer};
 
     // TODO: accept multiple date formats
     // TODO: get custom date format from config?
-    const FORMAT: &str = "%Y-%m-%dT%H:%M:%SZ";
+    const FORMAT: &str = "%Y-%m-%d";
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
     where
         D: Deserializer<'de>,
     {
+        // TODO: Improve error message when failing to parse date
         let s = String::deserialize(deserializer)?;
-        Utc.datetime_from_str(&s, FORMAT)
-            .map(|d| d.naive_utc().date())
-            .map_err(serde::de::Error::custom)
+        NaiveDate::parse_from_str(&s, FORMAT).map_err(serde::de::Error::custom)
     }
 }
 
