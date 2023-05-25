@@ -28,23 +28,15 @@
               Search
             </button>
 
-            {% match config.extra_links_start %}
-              {% when Some with (links) %}
-                {% for link in links %}
-                  <a class="text-black font-bold hover:underline" href="{{ link.href }}">{{ link.name }}</a>
-                {% endfor %}
-              {% when None %}
-            {% endmatch %}
+            {% for link in config.extra_links_start %}
+              <a class="text-black font-bold hover:underline" href="{{ link.href }}">{{ link.name }}</a>
+            {% endfor %}
           </div>
 
           <div class="flex space-x-6">
-            {% match config.extra_links_end %}
-              {% when Some with (links) %}
-                {% for link in links %}
-                  <a class="text-black font-bold hover:underline" href="{{ link.href }}">{{ link.name }}</a>
-                {% endfor %}
-              {% when None %}
-            {% endmatch %}
+            {% for link in config.extra_links_end %}
+              <a class="text-black font-bold hover:underline" href="{{ link.href }}">{{ link.name }}</a>
+            {% endfor %}
 
             {% if config.enable_rss %}
               <a class="text-black font-bold hover:underline" href="{{ config.base_url }}/atom.xml">RSS</a>

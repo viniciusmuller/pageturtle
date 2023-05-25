@@ -10,7 +10,9 @@
       </h1>
 
       <p>
-        {{ post.post.metadata.format_date() }}
+        <span class="font-bold">
+          {{ post.post.metadata.author.as_ref().unwrap_or(config.author) }}
+        </span> on {{ post.post.metadata.format_date() }}
       </p>
 
       <div class="space-x-4">
@@ -19,7 +21,9 @@
         {% endfor %}
       </div>
 
-      {{ post.rendered_html }}
+      <div class="mt-8">
+        {{ post.rendered_html }}
+      </div>
     </article>
   <div>
 {% endblock %}

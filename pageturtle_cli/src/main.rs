@@ -1,12 +1,8 @@
 use std::{
     fs,
     path::{Path, PathBuf},
-    println,
-    sync::{
-        Arc, Mutex,
-    },
-    thread,
-    time::{Duration, Instant},
+    println, thread,
+    time::Instant,
 };
 
 use clap::{Parser, Subcommand};
@@ -14,7 +10,7 @@ use comrak::{
     plugins::syntect::SyntectAdapter, Arena, ComrakExtensionOptions, ComrakOptions, ComrakPlugins,
 };
 use crossbeam_channel::{unbounded, Receiver};
-use notify::{Config, Error, Event, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use pageturtle_core::{
     self,
     blog::{
@@ -23,7 +19,7 @@ use pageturtle_core::{
     },
     feed, rendering,
 };
-use rouille::{router, Response, try_or_400, websocket};
+use rouille::{router, try_or_400, websocket, Response};
 use walkdir::WalkDir;
 
 #[derive(Debug)]
@@ -40,7 +36,7 @@ struct BuildPostError {
 #[derive(Debug, Parser)]
 #[clap(author, version, about, long_about = None)]
 #[clap(propagate_version = true)]
-struct CLI {
+struct Cli {
     #[clap(subcommand)]
     command: Command,
 }
@@ -79,7 +75,7 @@ enum Command {
 }
 
 fn main() {
-    let cli = CLI::parse();
+    let cli = Cli::parse();
     match &cli.command {
         Command::Build {
             directory,
@@ -155,7 +151,7 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
         let filepath = entry.path();
         match filepath.extension() {
             Some(e) => {
-                if !check_allowed_filetype(&e.to_str().unwrap()) {
+                if !check_allowed_filetype(e.to_str().unwrap()) {
                     continue;
                 }
             }
@@ -190,12 +186,12 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
     publishable_posts.sort_by(|a, b| b.post.metadata.date.cmp(&a.post.metadata.date));
 
     // create index page
-    let index_html = rendering::render_index(&publishable_posts, &config);
+    let index_html = rendering::render_index(&publishable_posts, config);
     let path = output_dir.join("index.html");
     fs::write(path, index_html).unwrap();
 
     // create tags page
-    let tags_html = rendering::render_tags_page(&posts, &config);
+    let tags_html = rendering::render_tags_page(&posts, config);
     let tags_path = output_dir.join("tags.html");
     fs::write(tags_path, tags_html).unwrap();
 
@@ -203,13 +199,13 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
     for post in &publishable_posts {
         let path = output_dir.join(&post.filename);
         // println!("writing file {:?}", path);
-        let page = rendering::render_post_page(post, &config);
+        let page = rendering::render_post_page(post, config);
         fs::write(path, page).unwrap();
     }
 
     // write rss feed
     if config.enable_rss {
-        let feed = feed::build_feed(&publishable_posts, &config);
+        let feed = feed::build_feed(&publishable_posts, config);
         let feed_xml = rendering::render_feed(&feed);
         fs::write(output_dir.join("atom.xml"), feed_xml).unwrap();
     }
@@ -256,13 +252,13 @@ fn start_dev_server(port: u32, blog_root: &Path, output_directory: &Path) {
         ..read_config(blog_root)
     };
 
-    build(&blog_root, &output_directory, &config);
+    build(blog_root, output_directory, &config);
 
     // Create a channel to receive the events.
     let (event_tx, event_rx) = unbounded();
     let (changes_tx, changes_rx) = unbounded();
 
-    let changes_rx_2 = changes_rx.clone();
+    let changes_rx_2 = changes_rx;
 
     let root = blog_root.to_owned();
 
@@ -316,7 +312,7 @@ fn start_dev_server(port: u32, blog_root: &Path, output_directory: &Path) {
                 // located.
                 // In order to avoid potential security threats, `match_assets` will never return any
                 // file outside of this directory even if the URL is for example `/../../foo.txt`.
-                let response = rouille::match_assets(&request, &output_2);
+                let response = rouille::match_assets(request, &output_2);
 
                 // If a file is found, the `match_assets` function will return a response with a 200
                 // status code and the content of the file. If no file is found, it will instead return
@@ -341,7 +337,7 @@ fn start_dev_server(port: u32, blog_root: &Path, output_directory: &Path) {
                     // function, and a `websocket` variable of type `Receiver<Websocket>`.
                     // Once the response has been sent back to the client, the `Receiver` will be
                     // filled by rouille with a `Websocket` object representing the websocket.
-                    let (response, websocket) = try_or_400!(websocket::start(&request, Some("handshake")));
+                    let (response, websocket) = try_or_400!(websocket::start(request, Some("handshake")));
 
                     // Because of the nature of I/O in Rust, we need to spawn a separate thread for
                     // each websocket.
@@ -359,13 +355,11 @@ fn start_dev_server(port: u32, blog_root: &Path, output_directory: &Path) {
                 _ => Response::empty_404()
             )
         });
-    });
-
-    thread::sleep(Duration::new(100, 0));
+    }).join().unwrap();
 }
 
 // Function run in a separate thread.
-fn websocket_handling_thread<'a>(mut websocket: websocket::Websocket, rx: Receiver<PathBuf>) {
+fn websocket_handling_thread(mut websocket: websocket::Websocket, rx: Receiver<PathBuf>) {
     for msg in rx {
         match websocket.send_text(msg.to_str().unwrap()) {
             Ok(_) => (),

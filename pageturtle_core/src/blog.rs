@@ -1,11 +1,13 @@
-use std::{path::{PathBuf, Path}, borrow::Borrow};
+use std::{
+    borrow::Borrow,
+    path::{Path, PathBuf},
+};
 
-use crate::utils::date;
-use chrono::{DateTime, Utc, Datelike, Timelike};
-use comrak::{nodes::AstNode, ComrakOptions, ComrakPlugins, Arena};
+use crate::utils::{date, default_empty, default_true};
+use chrono::{Datelike, NaiveDate};
+use comrak::{nodes::AstNode, Arena, ComrakOptions, ComrakPlugins};
 use serde::Deserialize;
 use slug::slugify;
-
 
 pub struct PostCompiler<'a> {
     arena: Arena<AstNode<'a>>,
@@ -55,8 +57,11 @@ pub struct BlogConfiguration {
     #[serde(default = "default_true")]
     pub enable_rss: bool,
 
-    pub extra_links_start: Option<Vec<Link>>,
-    pub extra_links_end: Option<Vec<Link>>,
+    #[serde(default = "default_empty")]
+    pub extra_links_start: Vec<Link>,
+
+    #[serde(default = "default_empty")]
+    pub extra_links_end: Vec<Link>,
 
     // Used for adding live reload support in the templates
     #[serde(default)]
@@ -70,23 +75,14 @@ impl BlogConfiguration {
     }
 }
 
-fn default_true() -> bool {
-    true
-}
-
-fn default_empty<T>() -> Vec<T> {
-    vec![]
-}
-
 #[derive(Debug, Deserialize)]
 pub struct BlogPostMetadata {
     pub title: String,
-    #[serde(default = "default_empty")]
-    pub authors: Vec<String>,
+    pub author: Option<String>,
     pub slug: Option<String>,
     pub description: Option<String>,
     #[serde(with = "date")]
-    pub date: DateTime<Utc>,
+    pub date: NaiveDate,
     #[serde(default = "default_empty")]
     pub tags: Vec<String>,
 }
@@ -95,17 +91,8 @@ impl BlogPostMetadata {
     pub fn format_date(&self) -> String {
         let date = self.date;
         let (_is_common_era, year) = date.year_ce();
-        let hour = date.hour();
 
-        format!(
-            "{}, {}/{:02}/{:02}, {:02}:{:02}",
-            date.weekday(),
-            year,
-            date.month(),
-            date.day(),
-            hour,
-            date.minute(),
-        )
+        format!("{}/{:02}/{:02}", year, date.month(), date.day(),)
     }
 }
 
@@ -172,7 +159,7 @@ pub fn build_blog_post<'a>(
                 message: msg,
                 line: 10,
                 column: 20,
-            })
+            });
         }
     };
 
@@ -206,7 +193,7 @@ fn parse_frontmatter<'a>(ast: &'a AstNode<'a>) -> Result<BlogPostMetadata, Strin
                 Ok(settings) => Ok(settings),
                 Err(e) => Err(e.to_string()),
             }
-        },
+        }
         None => Err("could not find frontmatter section in file".to_owned()),
     }
 }
