@@ -1,6 +1,6 @@
 use askama::Template;
 
-use crate::blog::{BlogConfiguration, PublishableBlogPost, BlogPost};
+use crate::{blog::{BlogConfiguration, PublishableBlogPost, BlogPost}, feed::Feed};
 
 #[derive(Template)]
 #[template(path = "tags.html")]
@@ -21,6 +21,12 @@ struct PostTemplate<'a> {
 struct IndexTemplate<'a> {
     config: &'a BlogConfiguration,
     posts: &'a Vec<PublishableBlogPost<'a>>,
+}
+
+#[derive(Template)]
+#[template(path = "atom.xml")]
+struct FeedTemplate<'a> {
+    feed: &'a Feed<'a>
 }
 
 pub fn render_tags_page<'a>(posts: &Vec<BlogPost<'a>>, config: &BlogConfiguration) -> String {
@@ -58,4 +64,8 @@ pub fn render_index<'a>(
 pub fn stylesheet() -> String {
     let styles_bytes = include_bytes!("../assets/styles.css");
     String::from_utf8(styles_bytes.to_vec()).unwrap()
+}
+
+pub fn render_feed<'a>(feed: &'a Feed<'a>) -> String {
+    FeedTemplate { feed }.render().unwrap()
 }

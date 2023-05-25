@@ -1,60 +1,52 @@
 use chrono::{Utc, DateTime};
-use serde::Serialize;
-use serde_xml_rs::to_string;
-use crate::{utils::date, blog::{PublishableBlogPost, BlogConfiguration}};
+use crate::{blog::{PublishableBlogPost, BlogConfiguration}};
 
-#[derive(Serialize)]
+// TODO: author
+#[derive(Debug)]
 pub struct Author {
     name: String,
     email: String
 }
 
-#[derive(Serialize)]
-struct Content {
-    #[serde(rename = "type")]
-    typ: String,
-    body: String
+#[derive(Debug)]
+pub struct FeedEntry<'a> {
+    pub id: &'a str,
+    pub title: &'a str,
+    pub content: &'a str,
+    pub updated: DateTime<Utc>,
+    pub link: String
 }
 
-#[derive(Serialize)]
-struct Link {
-    href: String,
-    rel: String
+#[derive(Debug)]
+pub struct Feed<'a> {
+    pub title: &'a str,
+    pub link: &'a str,
+    pub updated: DateTime<Utc>,
+    pub entries: Vec<FeedEntry<'a>>
 }
 
-impl Link {
-    fn new(href: String) -> Self {
-        Self {
-            href,
-            rel: "alternate".to_owned()
-        }
+pub fn build_feed<'a>(posts: &'a Vec<PublishableBlogPost<'a>>, config: &'a BlogConfiguration) -> Feed<'a> {
+    let entries = posts
+        .iter()
+        .map(|p| to_entry(&p, &config))
+        .collect();
+
+    Feed {
+        title: &config.blog_title,
+        link: &config.base_url,
+        updated: Utc::now(),
+        entries
     }
-} 
-
-#[derive(Serialize)]
-struct Entry {
-    id: String,
-    title: String,
-    content: Content,
-    link: Link
 }
 
-#[derive(Serialize)]
-struct Feed {
-    title: String,
-    link: String,
-    #[serde(with = "date")]
-    updated: DateTime<Utc>,
-    entries: Vec<Entry>
-}
+fn to_entry<'a>(post: &'a PublishableBlogPost<'a>, config: &'a BlogConfiguration) -> FeedEntry<'a> {
+    let filename = post.filename.to_str().unwrap();
 
-pub fn build_feed<'a>(posts: &'a Vec<PublishableBlogPost<'a>>, config: &'a BlogConfiguration) -> String {
-    let feed = Feed {
-        title: todo!(),
-        link: todo!(),
-        updated: todo!(),
-        entries: todo!(),
-    };
-
-    to_string(&feed).unwrap()
+    FeedEntry { 
+        id: filename,
+        title: &post.post.metadata.title,
+        content: &post.rendered_html,
+        updated: post.post.metadata.date,
+        link: format!("{}/{}",config.base_url, filename),
+    }
 }

@@ -112,7 +112,8 @@ fn main() {
     // write rss feed
     if config.enable_rss {
         let feed = feed::build_feed(&publishable_posts, &config);
-        fs::write(output_dir.join("feed.xml"), feed).unwrap();
+        let feed_xml = rendering::render_feed(&feed);
+        fs::write(output_dir.join("feed.xml"), feed_xml).unwrap();
     }
 
     fs::write(output_dir.join("styles.css"), rendering::stylesheet()).unwrap();
