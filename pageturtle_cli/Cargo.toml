@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+clap = { version = "3", features = ["derive", "cargo"]}
 walkdir = "2.3.3"
-pageturtle_core = { path = "../pageturtle_core" }
 comrak = "0.18.0"
+pageturtle_core = { path = "../pageturtle_core" }

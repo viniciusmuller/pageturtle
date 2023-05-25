@@ -47,7 +47,7 @@ fn to_entry<'a>(post: &'a PublishableBlogPost<'a>, config: &'a BlogConfiguration
         author: &config.author, // TODO: use post author if set
         content: &post.rendered_html,
         updated: rfc3339_date(post.post.metadata.date),
-        link: url.to_owned(),
+        link: url,
     }
 }
 

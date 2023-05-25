@@ -1,6 +1,6 @@
 pub mod date {
     use chrono::{DateTime, TimeZone, Utc};
-    use serde::{self, Deserialize, Deserializer, Serializer};
+    use serde::{self, Deserialize, Deserializer};
 
     const FORMAT: &str = "%Y-%m-%dT%H:%M:%SZ";
 
@@ -11,16 +11,5 @@ pub mod date {
         let s = String::deserialize(deserializer)?;
         Utc.datetime_from_str(&s, FORMAT)
             .map_err(serde::de::Error::custom)
-    }
-
-    pub fn serialize<S>(
-        date: &DateTime<Utc>,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let s = format!("{}", date.format(FORMAT));
-        serializer.serialize_str(&s)
     }
 }
