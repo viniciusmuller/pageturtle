@@ -1,0 +1,11 @@
+blog_title = "My blog"
+base_url = "https://your-website-here"
+author = "Blog author"
+
+extra_links_start = [
+    {name="About", href="/about.html"},
+]
+
+extra_links_end = [
+    {name="GitHub", href="https://github.com"},
+]

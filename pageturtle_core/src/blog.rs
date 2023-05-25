@@ -48,10 +48,13 @@ pub struct Link {
 pub struct BlogConfiguration {
     pub blog_title: String,
     pub author: String,
+
     #[serde(default)]
     pub base_url: String,
+
     #[serde(default = "default_true")]
     pub enable_rss: bool,
+
     pub extra_links_start: Option<Vec<Link>>,
     pub extra_links_end: Option<Vec<Link>>,
 }

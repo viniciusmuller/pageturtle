@@ -10,3 +10,4 @@ clap = { version = "3", features = ["derive", "cargo"]}
 walkdir = "2.3.3"
 comrak = "0.18.0"
 pageturtle_core = { path = "../pageturtle_core" }
+rouille = "3.6.2"

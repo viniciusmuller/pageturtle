@@ -4,4 +4,4 @@
 - [ ] Great CLI interface
 - [ ] Nice error messages
 - [ ] Automatically build table of contents
-- [ ] Hot reload
+- [ ] Development server and live reload
