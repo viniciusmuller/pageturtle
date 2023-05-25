@@ -3,8 +3,8 @@
 {% block title %}{{ config.blog_title }}{% endblock %}
 
 {% block content %}
-  <div class="flex justify-center">
-    <div class="w-[40vw]">
+  <div class="w-full flex justify-center my-8">
+    <div class="w-full">
       <h1 class="text-4xl font-bold">
         {{ config.blog_title }}
       </h1>
@@ -18,16 +18,17 @@
              <li>
                <span class="text-xl font-bold">{{ p.post.metadata.title }}</span>
 
-               <p>
+               <p class="text-sm">
                  {{ p.post.metadata.format_date() }}
                </p>
-               <p>
+
+               <p class="mt-2">
                  {{ p.description }}
                </p>
 
                {% match p.post.metadata.tags %}
                 {% when Some with (tags) %}
-                  <div class="space-x-2 my-1">
+                  <div class="space-x-2 my-2">
                     {% for tag in tags %}
                       <span class="px-2 py-1 bg-gray-300 rounded-md">
                         {{ tag }}

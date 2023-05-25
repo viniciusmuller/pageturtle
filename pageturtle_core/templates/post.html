@@ -1,14 +1,29 @@
 {% extends "root.html" %}
 
-{% block title %}{{ title }} - {{ config.blog_title }}{% endblock %}
+{% block title %}{{ post.post.metadata.title }} - {{ config.blog_title }}{% endblock %}
 
 {% block content %}
   <div class="flex flex-col items-center">
     <article class='prose my-8'>
-      <h1>
-        {{ title }}
+      <h1 class="!mb-2">
+        {{ post.post.metadata.title }}
       </h1>
-      {{ content }}
+
+      <p>
+        {{ post.post.metadata.format_date() }}
+      </p>
+
+      {% match post.post.metadata.tags %}
+        {% when Some with (tags) %}
+          <div class="space-x-4">
+            {% for tag in tags %}
+              <span class="px-2 py-1 bg-gray-300 rounded-md"> {{ tag }} </span>
+            {% endfor %}
+          </div>
+        {% when None %}
+      {% endmatch %}
+
+      {{ post.rendered_html }}
     </article>
   <div>
 {% endblock %}

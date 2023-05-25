@@ -1,15 +1,15 @@
 // TODO: modularize
 // TODO: move core to another crate and leave this just as a CLI app
 use askama::Template; // bring trait in scope
-use chrono::{DateTime, Utc, Timelike, Datelike};
+use chrono::{DateTime, Datelike, Timelike, Utc};
 use serde::Deserialize;
 use slug::slugify;
 use std::{
     borrow::Borrow,
     cell::RefCell,
-    path::{Path, PathBuf}, fs,
+    fs,
+    path::{Path, PathBuf},
 };
-
 
 use comrak::{
     arena_tree::Node,
@@ -18,26 +18,32 @@ use comrak::{
 };
 
 #[derive(Template)]
+#[template(path = "tags.html")]
+struct TagsTemplate<'a> {
+    config: &'a BlogConfiguration,
+    tags: Vec<&'a String>,
+}
+
+#[derive(Template)]
 #[template(path = "post.html", escape = "none")]
 struct PostTemplate<'a> {
     // TODO: compose templates
     config: &'a BlogConfiguration,
-    title: &'a str,
-    content: &'a str,
+    post: &'a PublishableBlogPost<'a>,
 }
 
 #[derive(Template)]
-#[template(path = "index.html", escape = "none")]
+#[template(path = "index.html")]
 struct IndexTemplate<'a> {
     // TODO: compose templates
     config: &'a BlogConfiguration,
-    posts: &'a Vec<PublishableBlogPost<'a>>
+    posts: &'a Vec<PublishableBlogPost<'a>>,
 }
 
 #[derive(Deserialize)]
 pub struct Link {
     name: String,
-    href: String
+    href: String,
 }
 
 #[derive(Deserialize)]
@@ -45,10 +51,28 @@ pub struct BlogConfiguration {
     pub blog_title: String,
     #[serde(default)]
     pub base_url: String,
-    #[serde(default="default_true")]
+    #[serde(default = "default_true")]
     pub enable_rss: bool,
     pub extra_links_start: Option<Vec<Link>>,
-    pub extra_links_end: Option<Vec<Link>>
+    pub extra_links_end: Option<Vec<Link>>,
+}
+
+pub fn render_tags_page<'a>(posts: &Vec<BlogPost<'a>>, config: &BlogConfiguration) -> String {
+    let mut all_tags = Vec::new();
+
+    for post in posts {
+        match post.metadata.tags {
+            Some(ref post_tags) => all_tags.extend(post_tags),
+            None => (),
+        }
+    }
+
+    TagsTemplate {
+        config,
+        tags: all_tags,
+    }
+    .render()
+    .unwrap()
 }
 
 fn default_true() -> bool {
@@ -165,9 +189,9 @@ pub struct CompilePostError {
 pub fn prepare_for_publish<'a>(
     p: &'a BlogPost<'a>,
     compiler: &'a PostCompiler<'a>,
-    config: &BlogConfiguration
 ) -> PublishableBlogPost<'a> {
-    let html_document = render_post_page(p, compiler, config);
+    let rendered_html = compiler.ast_to_html(p.ast);
+
     let metadata = &p.metadata;
     let filename = match metadata.slug {
         Some(ref s) => slugify(s),
@@ -177,14 +201,14 @@ pub fn prepare_for_publish<'a>(
 
     let description = match p.metadata.description {
         Some(ref d) => d.to_owned(),
-        None => "oh no".to_string()
+        None => "TODO: automatically build description".to_string(),
     };
 
     PublishableBlogPost {
         post: p,
         filename,
         description,
-        rendered_html: html_document,
+        rendered_html,
     }
 }
 
@@ -212,22 +236,18 @@ pub fn build_blog_post<'a>(
     })
 }
 
-fn render_post_page<'a>(p: &'a BlogPost<'a>, compiler: &'a PostCompiler<'a>, config: &BlogConfiguration) -> String {
-    let rendered_html = compiler.ast_to_html(p.ast);
-
-    PostTemplate {
-        title: &p.metadata.title,
-        content: &rendered_html,
-        config
-    }
-    .render()
-    .unwrap()
+pub fn render_post_page<'a>(
+    post: &'a PublishableBlogPost<'a>,
+    config: &'a BlogConfiguration,
+) -> String {
+    PostTemplate { post, config }.render().unwrap()
 }
 
-pub fn render_index<'a>(posts: &'a Vec<PublishableBlogPost<'a>>, config: &'a BlogConfiguration) -> String {
-    IndexTemplate { posts, config, }
-    .render()
-    .unwrap()
+pub fn render_index<'a>(
+    posts: &'a Vec<PublishableBlogPost<'a>>,
+    config: &'a BlogConfiguration,
+) -> String {
+    IndexTemplate { posts, config }.render().unwrap()
 }
 
 fn parse_frontmatter<'a>(ast: &'a Node<'a, RefCell<Ast>>) -> Result<BlogPostMetadata, String> {

@@ -8,11 +8,11 @@
   </head>
 
   <body>
-    <nav class="bg-gray-300 w-full px-4 py-2">
+    <nav class="bg-gray-200 w-full px-4 py-2">
       <div class="w-full flex">
           <div class="flex mr-auto space-x-6">
-            <a class="text-black underline" href="{{ config.base_url }}/index.html">Home</a>
-            <a class="text-black underline" href="{{ config.base_url }}/index.html">Tags</a>
+            <a class="text-black font-bold hover:underline" href="{{ config.base_url }}/index.html">Home</a>
+            <a class="text-black font-bold hover:underline" href="{{ config.base_url }}/tags.html">Tags</a>
 
             <button>
               Search
@@ -21,7 +21,7 @@
             {% match config.extra_links_start %}
               {% when Some with (links) %}
                 {% for link in links %}
-                  <a class="text-black underline" href="{{ link.href }}">{{ link.name }}</a>
+                  <a class="text-black font-bold hover:underline" href="{{ link.href }}">{{ link.name }}</a>
                 {% endfor %}
               {% when None %}
             {% endmatch %}
@@ -31,20 +31,22 @@
             {% match config.extra_links_end %}
               {% when Some with (links) %}
                 {% for link in links %}
-                  <a class="text-black underline" href="{{ link.href }}">{{ link.name }}</a>
+                  <a class="text-black font-bold hover:underline" href="{{ link.href }}">{{ link.name }}</a>
                 {% endfor %}
               {% when None %}
             {% endmatch %}
 
             {% if config.enable_rss %}
-              <a class="text-black underline" href="{{ config.base_url }}/index.html">RSS</a>
+              <a class="text-black font-bold hover:underline" href="{{ config.base_url }}/index.html">RSS</a>
             {% endif %}
           </div>
         </div>
       </div>
     </nav>
-    <main class='p-4'>
-      {% block content %}{% endblock %}
+    <main class="p-4 w-full flex justify-center">
+      <div class="w-[40vw]">
+        {% block content %}{% endblock %}
+      </div>
     </main>
   </body>
 </html>
