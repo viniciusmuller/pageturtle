@@ -13,7 +13,6 @@
          var socket = new WebSocket("ws://localhost:7000/ws", "handshake");
 
          socket.onmessage = function(event) {
-           console.log(event);
            location.reload();
          }
       </script>
@@ -24,9 +23,9 @@
             <a class="text-black font-bold hover:underline" href="{{ config.base_url }}/index.html">Home</a>
             <a class="text-black font-bold hover:underline" href="{{ config.base_url }}/tags.html">Tags</a>
 
-            <button>
-              Search
-            </button>
+            <!-- <button> -->
+            <!--   Search -->
+            <!-- </button> -->
 
             {% for link in config.extra_links_start %}
               <a class="text-black font-bold hover:underline" href="{{ link.href }}">{{ link.name }}</a>

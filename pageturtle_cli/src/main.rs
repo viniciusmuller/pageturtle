@@ -347,6 +347,7 @@ fn start_dev_server(port: u32, blog_root: &Path, output_directory: &Path) {
                         // This line will block until the `response` above has been returned.
                         let ws = websocket.recv().unwrap();
                         // We use a separate function for better readability.
+                        // TODO: figure out about the probalby certain race conditon/batching that seems to be occuring
                         websocket_handling_thread(ws, changes_rx_3);
                     });
 
