@@ -29,14 +29,11 @@ struct FeedTemplate<'a> {
     feed: &'a Feed<'a>
 }
 
-pub fn render_tags_page<'a>(posts: &Vec<BlogPost<'a>>, config: &BlogConfiguration) -> String {
+pub fn render_tags_page(posts: &Vec<BlogPost<'_>>, config: &BlogConfiguration) -> String {
     let mut all_tags = Vec::new();
 
     for post in posts {
-        match post.metadata.tags {
-            Some(ref post_tags) => all_tags.extend(post_tags),
-            None => (),
-        }
+        all_tags.extend(&post.metadata.tags);
     }
 
     TagsTemplate {

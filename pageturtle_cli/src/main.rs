@@ -6,7 +6,7 @@ use std::{
 use comrak::{
     plugins::syntect::SyntectAdapter, Arena, ComrakExtensionOptions, ComrakOptions, ComrakPlugins,
 };
-use pageturtle_core::{blog::{BlogPost, PostCompiler, build_blog_post, PublishableBlogPost, prepare_for_publish, self, BlogConfiguration}, rendering, self, feed};
+use pageturtle_core::{blog::{BlogPost, PostCompiler, build_blog_post, PublishableBlogPost, prepare_for_publish, BlogConfiguration}, rendering, self, feed};
 use walkdir::WalkDir;
 
 #[derive(Debug)]
@@ -113,7 +113,7 @@ fn main() {
     if config.enable_rss {
         let feed = feed::build_feed(&publishable_posts, &config);
         let feed_xml = rendering::render_feed(&feed);
-        fs::write(output_dir.join("feed.xml"), feed_xml).unwrap();
+        fs::write(output_dir.join("atom.xml"), feed_xml).unwrap();
     }
 
     fs::write(output_dir.join("styles.css"), rendering::stylesheet()).unwrap();

@@ -47,6 +47,7 @@ pub struct Link {
 #[derive(Deserialize)]
 pub struct BlogConfiguration {
     pub blog_title: String,
+    pub author: String,
     #[serde(default)]
     pub base_url: String,
     #[serde(default = "default_true")]
@@ -66,14 +67,21 @@ fn default_true() -> bool {
     true
 }
 
+fn default_empty<T>() -> Vec<T> {
+    vec![]
+}
+
 #[derive(Debug, Deserialize)]
 pub struct BlogPostMetadata {
     pub title: String,
+    #[serde(default = "default_empty")]
+    pub authors: Vec<String>,
     pub slug: Option<String>,
     pub description: Option<String>,
     #[serde(with = "date")]
     pub date: DateTime<Utc>,
-    pub tags: Option<Vec<String>>,
+    #[serde(default = "default_empty")]
+    pub tags: Vec<String>,
 }
 
 impl BlogPostMetadata {

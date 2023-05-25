@@ -13,15 +13,11 @@
         {{ post.post.metadata.format_date() }}
       </p>
 
-      {% match post.post.metadata.tags %}
-        {% when Some with (tags) %}
-          <div class="space-x-4">
-            {% for tag in tags %}
-              <span class="px-2 py-1 bg-gray-300 rounded-md"> {{ tag }} </span>
-            {% endfor %}
-          </div>
-        {% when None %}
-      {% endmatch %}
+      <div class="space-x-4">
+        {% for tag in post.post.metadata.tags %}
+          <span class="px-2 py-1 bg-gray-300 rounded-md"> {{ tag }} </span>
+        {% endfor %}
+      </div>
 
       {{ post.rendered_html }}
     </article>
