@@ -15,6 +15,7 @@ struct TagsTemplate<'a> {
 #[derive(Template)]
 #[template(path = "post.html", escape = "none")]
 struct PostTemplate<'a> {
+    authors: String,
     config: &'a BlogConfiguration,
     post: &'a PublishableBlogPost<'a>,
 }
@@ -51,7 +52,11 @@ pub fn render_post_page<'a>(
     post: &'a PublishableBlogPost<'a>,
     config: &'a BlogConfiguration,
 ) -> String {
-    PostTemplate { post, config }.render().unwrap()
+    let authors = post.post.metadata.authors.as_ref()
+        .map(|v| v.join(", "))
+        .unwrap_or(config.author.clone()) ;
+
+    PostTemplate { authors, post, config }.render().unwrap()
 }
 
 pub fn render_index<'a>(

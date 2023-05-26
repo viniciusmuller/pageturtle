@@ -123,9 +123,8 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
     // The returned nodes are created in the supplied Arena, and are bound by its lifetime.
     let arena = Arena::new();
 
-    let adapter = SyntectAdapter::new("base16-ocean.dark");
-    let mut plugins = ComrakPlugins::default();
-    plugins.render.codefence_syntax_highlighter = Some(&adapter);
+    // let adapter = SyntectAdapter::new("base16-ocean.dark");
+    // plugins.render.codefence_syntax_highlighter = Some(&adapter);
     let options = &ComrakOptions {
         extension: ComrakExtensionOptions {
             front_matter_delimiter: Some("---".to_owned()),
@@ -134,7 +133,7 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
         ..ComrakOptions::default()
     };
 
-    let compiler = PostCompiler::new(arena, options, &plugins);
+    let compiler = PostCompiler::new(arena, options);
 
     let mut posts: Vec<BlogPost> = vec![];
     let mut failures: Vec<BuildPostError> = vec![];
@@ -221,13 +220,6 @@ fn init_blog(target_directory: &Path) -> Result<(), String> {
 
     if target_directory.exists() && !target_directory.is_dir() {
         return Err("output path already exists and is not a directory".to_owned());
-    }
-
-    if target_directory.exists()
-        && target_directory.is_dir()
-        && target_directory.read_dir().unwrap().next().is_some()
-    {
-        return Err("output directory already exists and is not empty".to_owned());
     }
 
     if !target_directory.exists() {

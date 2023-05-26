@@ -5,26 +5,23 @@ use std::{
 
 use crate::utils::{date, default_empty, default_true};
 use chrono::{Datelike, NaiveDate};
-use comrak::{nodes::AstNode, Arena, ComrakOptions, ComrakPlugins};
+use comrak::{nodes::AstNode, Arena, ComrakOptions};
 use serde::Deserialize;
 use slug::slugify;
 
 pub struct PostCompiler<'a> {
     arena: Arena<AstNode<'a>>,
     options: &'a ComrakOptions,
-    plugins: &'a ComrakPlugins<'a>,
 }
 
 impl<'a> PostCompiler<'a> {
     pub fn new(
         arena: Arena<AstNode<'a>>,
         options: &'a ComrakOptions,
-        plugins: &'a ComrakPlugins<'a>,
     ) -> PostCompiler<'a> {
         Self {
             arena,
             options,
-            plugins,
         }
     }
 
@@ -34,8 +31,7 @@ impl<'a> PostCompiler<'a> {
 
     pub fn ast_to_html(&'a self, ast: &'a AstNode<'a>) -> String {
         let mut output_buffer = Vec::new();
-        comrak::format_html_with_plugins(ast, self.options, &mut output_buffer, self.plugins)
-            .unwrap();
+        comrak::format_html(ast, self.options, &mut output_buffer).unwrap();
         String::from_utf8(output_buffer).unwrap()
     }
 }
@@ -78,7 +74,7 @@ impl BlogConfiguration {
 #[derive(Debug, Deserialize)]
 pub struct BlogPostMetadata {
     pub title: String,
-    pub author: Option<String>,
+    pub authors: Option<Vec<String>>,
     pub slug: Option<String>,
     pub description: Option<String>,
     #[serde(with = "date")]

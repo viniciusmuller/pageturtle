@@ -11,7 +11,7 @@
 
       <p>
         <span class="font-bold">
-          {{ post.post.metadata.author.as_ref().unwrap_or(config.author) }}
+          {{ authors }}
         </span> on {{ post.post.metadata.format_date() }}
       </p>
 
