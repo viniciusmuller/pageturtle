@@ -1,13 +1,106 @@
 use std::{
-    borrow::Borrow,
+    borrow::{Borrow, BorrowMut},
+    collections::VecDeque,
     path::{Path, PathBuf},
 };
 
 use crate::utils::{date, default_empty, default_true};
 use chrono::{Datelike, NaiveDate};
-use comrak::{nodes::AstNode, Arena, ComrakOptions};
+use comrak::{
+    nodes::{AstNode, NodeHeading, NodeValue},
+    Arena, ComrakOptions,
+};
 use serde::Deserialize;
 use slug::slugify;
+
+#[derive(Debug, Clone)]
+pub struct TableOfContentsEntry {
+    level: u8,
+    title: String,
+    anchor: String,
+    children: Vec<TableOfContentsEntry>,
+}
+
+#[derive(Debug)]
+pub struct TableOfContents {
+    entries: Vec<TableOfContentsEntry>,
+}
+
+impl<'a> TableOfContents {
+    pub fn from_ast(ast: &'a AstNode<'a>) -> TableOfContentsEntry {
+        let mut entries = VecDeque::new();
+
+        for node in ast.borrow().traverse() {
+            match node {
+                comrak::arena_tree::NodeEdge::Start(nv) => match nv.data.borrow().value {
+                    NodeValue::Heading(h) => {
+                        for c in nv.children() {
+                            match &c.data.borrow().value {
+                                NodeValue::Text(content) => {
+                                    let entry = TableOfContentsEntry {
+                                        level: h.level,
+                                        title: content.to_string(),
+                                        anchor: slugify(&content),
+                                        children: Vec::new(),
+                                    };
+
+                                    entries.push_back(entry);
+                                }
+                                _ => continue,
+                            }
+                        }
+                    }
+                    _ => continue,
+                },
+                _ => continue,
+            }
+        }
+
+        while let Some(root) = Self::build_node(&mut entries) {
+            dbg!(&root);
+        }
+
+        todo!();
+    }
+
+    fn build_node(
+        mut entries: &mut VecDeque<TableOfContentsEntry>,
+    ) -> Option<TableOfContentsEntry> {
+        if entries.len() < 1 {
+            return None;
+        }
+
+        let mut root = entries.pop_front().unwrap();
+
+        while !entries.is_empty() {
+            let mut node = entries.pop_front().unwrap();
+
+            if node.level > root.level {
+                match Self::build_node(&mut entries) {
+                    Some(child) => {
+                        if node.level > child.level {
+                            entries.push_front(child);
+                            root.children.push(node);
+                            return Some(root);
+                        } else {
+                            node.children.push(child)
+                        }
+                    },
+                    None => (),
+                }
+
+                root.children.push(node.to_owned());
+            }
+
+            if node.level < root.level {
+                entries.push_front(node);
+                return Some(root);
+            }
+        }
+
+        return Some(root);
+    }
+}
 
 pub struct PostCompiler<'a> {
     arena: Arena<AstNode<'a>>,
@@ -15,14 +108,8 @@ pub struct PostCompiler<'a> {
 }
 
 impl<'a> PostCompiler<'a> {
-    pub fn new(
-        arena: Arena<AstNode<'a>>,
-        options: &'a ComrakOptions,
-    ) -> PostCompiler<'a> {
-        Self {
-            arena,
-            options,
-        }
+    pub fn new(arena: Arena<AstNode<'a>>, options: &'a ComrakOptions) -> PostCompiler<'a> {
+        Self { arena, options }
     }
 
     pub fn to_ast(&'a self, content: &str) -> &'a AstNode<'a> {
@@ -97,6 +184,7 @@ pub struct BlogPost<'a> {
     pub metadata: BlogPostMetadata,
     pub raw_content: String,
     pub ast: &'a AstNode<'a>,
+    pub toc: TableOfContentsEntry,
 }
 
 #[derive(Debug)]
@@ -159,8 +247,12 @@ pub fn build_blog_post<'a>(
         }
     };
 
+    let toc = TableOfContents::from_ast(&ast);
+    dbg!(&toc);
+
     Ok(BlogPost {
         raw_content: content.to_owned(),
+        toc,
         ast,
         metadata,
     })

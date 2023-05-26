@@ -52,11 +52,21 @@ pub fn render_post_page<'a>(
     post: &'a PublishableBlogPost<'a>,
     config: &'a BlogConfiguration,
 ) -> String {
-    let authors = post.post.metadata.authors.as_ref()
+    let authors = post
+        .post
+        .metadata
+        .authors
+        .as_ref()
         .map(|v| v.join(", "))
-        .unwrap_or(config.author.clone()) ;
+        .unwrap_or(config.author.clone());
 
-    PostTemplate { authors, post, config }.render().unwrap()
+    PostTemplate {
+        authors,
+        post,
+        config,
+    }
+    .render()
+    .unwrap()
 }
 
 pub fn render_index<'a>(
