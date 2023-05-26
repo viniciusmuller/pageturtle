@@ -16,18 +16,18 @@ use slug::slugify;
 #[derive(Debug, Clone)]
 pub struct TableOfContentsEntry {
     level: u8,
-    title: String,
-    anchor: String,
-    children: Vec<TableOfContentsEntry>,
+    pub title: String,
+    pub anchor: String,
+    pub children: Vec<TableOfContentsEntry>,
 }
 
 #[derive(Debug)]
 pub struct TableOfContents {
-    entries: Vec<TableOfContentsEntry>,
+    pub entries: Vec<TableOfContentsEntry>,
 }
 
 impl<'a> TableOfContents {
-    pub fn from_ast(ast: &'a AstNode<'a>) -> TableOfContentsEntry {
+    pub fn from_ast(ast: &'a AstNode<'a>) -> TableOfContents {
         let mut entries = VecDeque::new();
 
         for node in ast.borrow().traverse() {
@@ -56,11 +56,16 @@ impl<'a> TableOfContents {
             }
         }
 
+        dbg!(&entries);
+
+        let mut parsed_entries = Vec::new();
+
         while let Some(root) = Self::build_node(&mut entries) {
             dbg!(&root);
+            parsed_entries.push(root);
         }
 
-        todo!();
+        TableOfContents { entries: parsed_entries }
     }
 
     fn build_node(
@@ -70,7 +75,10 @@ impl<'a> TableOfContents {
             return None;
         }
 
-        let mut root = entries.pop_front().unwrap();
+        let mut root = match entries.pop_front() {
+            Some(e) => e,
+            None => return None
+        };
 
         while !entries.is_empty() {
             let mut node = entries.pop_front().unwrap();
@@ -78,7 +86,7 @@ impl<'a> TableOfContents {
             if node.level > root.level {
                 match Self::build_node(&mut entries) {
                     Some(child) => {
-                        if node.level > child.level {
+                        if node.level >= child.level {
                             entries.push_front(child);
                             root.children.push(node);
                             return Some(root);
@@ -92,7 +100,7 @@ impl<'a> TableOfContents {
                 root.children.push(node.to_owned());
             }
 
-            if node.level < root.level {
+            if node.level <= root.level {
                 entries.push_front(node);
                 return Some(root);
             }
@@ -164,10 +172,15 @@ pub struct BlogPostMetadata {
     pub authors: Option<Vec<String>>,
     pub slug: Option<String>,
     pub description: Option<String>,
+
     #[serde(with = "date")]
     pub date: NaiveDate,
+
     #[serde(default = "default_empty")]
     pub tags: Vec<String>,
+
+    #[serde(default)]
+    pub table_of_contents: bool,
 }
 
 impl BlogPostMetadata {
@@ -184,7 +197,7 @@ pub struct BlogPost<'a> {
     pub metadata: BlogPostMetadata,
     pub raw_content: String,
     pub ast: &'a AstNode<'a>,
-    pub toc: TableOfContentsEntry,
+    pub toc: TableOfContents,
 }
 
 #[derive(Debug)]
@@ -248,7 +261,6 @@ pub fn build_blog_post<'a>(
     };
 
     let toc = TableOfContents::from_ast(&ast);
-    dbg!(&toc);
 
     Ok(BlogPost {
         raw_content: content.to_owned(),

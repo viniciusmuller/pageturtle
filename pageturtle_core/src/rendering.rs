@@ -1,7 +1,7 @@
 use askama::Template;
 
 use crate::{
-    blog::{BlogConfiguration, BlogPost, PublishableBlogPost},
+    blog::{BlogConfiguration, BlogPost, PublishableBlogPost, TableOfContents, TableOfContentsEntry},
     feed::Feed,
 };
 
@@ -15,6 +15,7 @@ struct TagsTemplate<'a> {
 #[derive(Template)]
 #[template(path = "post.html", escape = "none")]
 struct PostTemplate<'a> {
+    toc: Option<TocTemplate>,
     authors: String,
     config: &'a BlogConfiguration,
     post: &'a PublishableBlogPost<'a>,
@@ -25,6 +26,48 @@ struct PostTemplate<'a> {
 struct IndexTemplate<'a> {
     config: &'a BlogConfiguration,
     posts: &'a Vec<PublishableBlogPost<'a>>,
+}
+
+#[derive(Template)]
+#[template(path = "toc-entry.html", escape = "none")]
+struct TocEntryTemplate {
+    title: String,
+    anchor: String,
+    children: Vec<TocEntryTemplate>,
+}
+
+impl<'a> TocEntryTemplate {
+    fn from_toc_entry(entry: &TableOfContentsEntry) -> TocEntryTemplate {
+        let children = entry.
+                children.
+                iter().
+                map(|e| Self::from_toc_entry(e))
+                .collect::<Vec<TocEntryTemplate>>();
+
+        TocEntryTemplate { 
+            children,
+            title: entry.title.clone(),
+            anchor: entry.anchor.clone(),
+        }
+    }
+}
+
+#[derive(Template)]
+#[template(path = "toc.html", escape = "none")]
+struct TocTemplate {
+    entries: Vec<TocEntryTemplate>,
+}
+
+impl<'a> TocTemplate {
+    pub fn from_toc(toc: &TableOfContents) -> TocTemplate {
+        let mut templates = Vec::new();
+
+        for entry in &toc.entries {
+            templates.push(TocEntryTemplate::from_toc_entry(entry));
+        }
+
+        TocTemplate { entries: templates }
+    }
 }
 
 #[derive(Template)]
@@ -60,10 +103,17 @@ pub fn render_post_page<'a>(
         .map(|v| v.join(", "))
         .unwrap_or(config.author.clone());
 
+    let toc = if post.post.metadata.table_of_contents {
+        Some(TocTemplate::from_toc(&post.post.toc))
+    } else {
+        None
+    };
+
     PostTemplate {
         authors,
         post,
         config,
+        toc,
     }
     .render()
     .unwrap()

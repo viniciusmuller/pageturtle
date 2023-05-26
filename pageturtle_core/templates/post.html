@@ -21,6 +21,15 @@
         {% endfor %}
       </div>
 
+      {% match toc %}
+        {% when Some with (toc) %}
+          <div class="my-8">
+            {{ toc }}
+          </div>
+
+        {% when None %}
+      {% endmatch %}
+
       <div class="mt-8">
         {{ post.rendered_html }}
       </div>
