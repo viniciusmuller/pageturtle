@@ -15,7 +15,7 @@ use pageturtle_core::{
     self,
     blog::{
         build_blog_post, prepare_for_publish, BlogConfiguration, BlogPost, PostCompiler,
-        PublishableBlogPost,
+        PublishableBlogPost, HeadingRenderer,
     },
     feed, rendering,
 };
@@ -133,7 +133,11 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
         ..ComrakOptions::default()
     };
 
-    let compiler = PostCompiler::new(arena, options);
+    let adapter = HeadingRenderer::new();
+    let mut plugins = ComrakPlugins::default();
+    plugins.render.heading_adapter = Some(&adapter);
+
+    let compiler = PostCompiler::new(arena, &options, &plugins);
 
     let mut posts: Vec<BlogPost> = vec![];
     let mut failures: Vec<BuildPostError> = vec![];

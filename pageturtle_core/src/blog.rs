@@ -1,5 +1,5 @@
 use std::{
-    borrow::{Borrow, BorrowMut},
+    borrow::Borrow,
     collections::VecDeque,
     path::{Path, PathBuf},
 };
@@ -7,8 +7,8 @@ use std::{
 use crate::utils::{date, default_empty, default_true};
 use chrono::{Datelike, NaiveDate};
 use comrak::{
-    nodes::{AstNode, NodeHeading, NodeValue},
-    Arena, ComrakOptions,
+    nodes::{AstNode, NodeValue},
+    Arena, ComrakOptions, adapters::{HeadingAdapter, HeadingMeta}, ComrakPlugins,
 };
 use serde::Deserialize;
 use slug::slugify;
@@ -56,12 +56,9 @@ impl<'a> TableOfContents {
             }
         }
 
-        dbg!(&entries);
-
         let mut parsed_entries = Vec::new();
 
         while let Some(root) = Self::build_node(&mut entries) {
-            dbg!(&root);
             parsed_entries.push(root);
         }
 
@@ -110,23 +107,58 @@ impl<'a> TableOfContents {
     }
 }
 
+pub struct HeadingRenderer { }
+
+impl HeadingRenderer {
+    pub fn new() -> Self {
+        HeadingRenderer {  }
+    }
+}
+
+impl HeadingAdapter for HeadingRenderer {
+    fn enter(
+        &self,
+        output: &mut dyn std::io::Write,
+        heading: &comrak::adapters::HeadingMeta,
+        _sourcepos: Option<comrak::nodes::Sourcepos>,
+    ) -> std::io::Result<()> {
+        let slug = slugify(&heading.content);
+        let tag = format!("
+          <a class=\"no-underline\" href=\"#{}\">
+              <h{} id=\"{}\" class=\"group relative\">
+              <span class=\"hidden group-hover:inline absolute -left-8\">#</span>
+        ", slug, heading.level, slug);
+        output.write(tag.as_bytes()).unwrap();
+        Ok(())
+    }
+
+    fn exit(&self, output: &mut dyn std::io::Write, heading: &HeadingMeta) -> std::io::Result<()> {
+        output.write(format!("</h{}></a>", heading.level).as_bytes()).unwrap();
+        Ok(())
+    }
+}
+
 pub struct PostCompiler<'a> {
     arena: Arena<AstNode<'a>>,
     options: &'a ComrakOptions,
+    plugins: &'a ComrakPlugins<'a>,
 }
 
 impl<'a> PostCompiler<'a> {
-    pub fn new(arena: Arena<AstNode<'a>>, options: &'a ComrakOptions) -> PostCompiler<'a> {
-        Self { arena, options }
+    pub fn new(arena: Arena<AstNode<'a>>, options: &'a ComrakOptions, plugins: &'a ComrakPlugins<'a>) -> PostCompiler<'a> {
+        Self { arena, options, plugins  }
     }
 
     pub fn to_ast(&'a self, content: &str) -> &'a AstNode<'a> {
         comrak::parse_document(&self.arena, content, self.options)
     }
 
+    // TODO: reimplement this, now adding correct anchors to headings, 
+    // parsing images correctly and handling codeblocks better (maybe use
+    // treesitter for it)
     pub fn ast_to_html(&'a self, ast: &'a AstNode<'a>) -> String {
         let mut output_buffer = Vec::new();
-        comrak::format_html(ast, self.options, &mut output_buffer).unwrap();
+        comrak::format_html_with_plugins(ast, self.options, &mut output_buffer, self.plugins).unwrap();
         String::from_utf8(output_buffer).unwrap()
     }
 }

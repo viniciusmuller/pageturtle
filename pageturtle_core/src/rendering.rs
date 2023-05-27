@@ -1,4 +1,5 @@
 use askama::Template;
+use comrak::adapters::{HeadingAdapter, HeadingMeta};
 
 use crate::{
     blog::{BlogConfiguration, BlogPost, PublishableBlogPost, TableOfContents, TableOfContentsEntry},
