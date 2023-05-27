@@ -5,6 +5,7 @@ use std::{
 };
 
 use crate::utils::{date, default_empty, default_true};
+use askama::filters::wordcount;
 use chrono::{Datelike, NaiveDate};
 use comrak::{
     nodes::{AstNode, NodeValue},
@@ -230,6 +231,7 @@ pub struct BlogPost<'a> {
     pub raw_content: String,
     pub ast: &'a AstNode<'a>,
     pub toc: TableOfContents,
+    pub reading_time: u16,
 }
 
 #[derive(Debug)]
@@ -263,7 +265,7 @@ pub fn prepare_for_publish<'a>(
 
     let description = match p.metadata.description {
         Some(ref d) => d.to_owned(),
-        None => "TODO: automatically build description".to_string(),
+        None => build_description(p.ast),
     };
 
     PublishableBlogPost {
@@ -272,6 +274,64 @@ pub fn prepare_for_publish<'a>(
         description,
         rendered_html,
     }
+}
+
+fn build_description<'a>(ast: &'a AstNode<'a>) -> String {
+    use comrak::nodes::NodeValue::*;
+
+    for node in ast.borrow().traverse() {
+        match node {
+            comrak::arena_tree::NodeEdge::Start(nv) => {
+                if let Paragraph = nv.borrow().data.borrow().value {
+                    let mut buffer = String::new();
+
+                    for c in nv.borrow().children() {
+                        if let Text(ref t) = c.data.borrow().value {
+                            buffer.push_str(t);
+                            buffer.push(' ');
+                        }
+                    }
+
+                    let description = buffer
+                        .split(" ")
+                        .take(25)
+                        .collect::<Vec<&str>>()
+                        .join(" ");
+
+                    return format!("{}...", description)
+                }
+            }
+            comrak::arena_tree::NodeEdge::End(_nv) => continue,
+        }
+    }
+
+    "".to_owned()
+}
+
+fn reading_time<'a>(ast: &'a AstNode<'a>) -> u16 {
+    use comrak::nodes::NodeValue::*;
+    let avg_words_per_minute = 225.0;
+    let mut words_count = 0;
+
+    for node in ast.borrow().traverse() {
+        match node {
+            comrak::arena_tree::NodeEdge::Start(nv) => {
+                match nv.borrow().data.borrow().value {
+                    Text(ref t) => {
+                        words_count += wordcount(&t).unwrap();
+                    },
+                    CodeBlock(ref b) => {
+                        words_count += wordcount(&b.literal).unwrap();
+                    }
+                    _ => continue,
+                }
+            },
+            _ => continue,
+        }
+    }
+
+    let average = (words_count as f64) / avg_words_per_minute;
+    average.ceil() as u16
 }
 
 pub fn build_blog_post<'a>(
@@ -293,9 +353,11 @@ pub fn build_blog_post<'a>(
     };
 
     let toc = TableOfContents::from_ast(&ast);
+    let reading_time = reading_time(&ast);
 
     Ok(BlogPost {
         raw_content: content.to_owned(),
+        reading_time,
         toc,
         ast,
         metadata,

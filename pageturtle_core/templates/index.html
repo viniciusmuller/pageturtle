@@ -19,7 +19,7 @@
                <span class="text-xl font-bold">{{ p.post.metadata.title }}</span>
 
                <p class="text-sm">
-                 {{ p.post.metadata.format_date() }}
+                 {{ p.post.metadata.format_date() }}, {{ p.post.reading_time }} {% if p.post.reading_time == 1 %} minute {% else %} minutes {% endif %} read
                </p>
 
                <p class="mt-2">
