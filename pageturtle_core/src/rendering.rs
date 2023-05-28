@@ -1,8 +1,9 @@
 use askama::Template;
-use comrak::adapters::{HeadingAdapter, HeadingMeta};
 
 use crate::{
-    blog::{BlogConfiguration, BlogPost, PublishableBlogPost, TableOfContents, TableOfContentsEntry},
+    blog::{
+        BlogConfiguration, BlogPost, PublishableBlogPost, TableOfContents, TableOfContentsEntry,
+    },
     feed::Feed,
 };
 
@@ -39,13 +40,13 @@ struct TocEntryTemplate {
 
 impl<'a> TocEntryTemplate {
     fn from_toc_entry(entry: &TableOfContentsEntry) -> TocEntryTemplate {
-        let children = entry.
-                children.
-                iter().
-                map(|e| Self::from_toc_entry(e))
-                .collect::<Vec<TocEntryTemplate>>();
+        let children = entry
+            .children
+            .iter()
+            .map(Self::from_toc_entry)
+            .collect::<Vec<TocEntryTemplate>>();
 
-        TocEntryTemplate { 
+        TocEntryTemplate {
             children,
             title: entry.title.clone(),
             anchor: entry.anchor.clone(),

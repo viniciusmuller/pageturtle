@@ -1,6 +1,7 @@
 use std::{
-    borrow::Borrow,
-    collections::VecDeque,
+    borrow::{Borrow, BorrowMut},
+    collections::{HashMap, VecDeque},
+    dbg,
     path::{Path, PathBuf},
 };
 
@@ -8,8 +9,9 @@ use crate::utils::{date, default_empty, default_true};
 use askama::filters::wordcount;
 use chrono::{Datelike, NaiveDate};
 use comrak::{
+    adapters::{HeadingAdapter, HeadingMeta},
     nodes::{AstNode, NodeValue},
-    Arena, ComrakOptions, adapters::{HeadingAdapter, HeadingMeta}, ComrakPlugins,
+    Arena, ComrakOptions, ComrakPlugins,
 };
 use serde::Deserialize;
 use slug::slugify;
@@ -41,7 +43,7 @@ impl<'a> TableOfContents {
                                     let entry = TableOfContentsEntry {
                                         level: h.level,
                                         title: content.to_string(),
-                                        anchor: slugify(&content),
+                                        anchor: slugify(content),
                                         children: Vec::new(),
                                     };
 
@@ -63,26 +65,26 @@ impl<'a> TableOfContents {
             parsed_entries.push(root);
         }
 
-        TableOfContents { entries: parsed_entries }
+        TableOfContents {
+            entries: parsed_entries,
+        }
     }
 
-    fn build_node(
-        mut entries: &mut VecDeque<TableOfContentsEntry>,
-    ) -> Option<TableOfContentsEntry> {
-        if entries.len() < 1 {
+    fn build_node(entries: &mut VecDeque<TableOfContentsEntry>) -> Option<TableOfContentsEntry> {
+        if entries.is_empty() {
             return None;
         }
 
         let mut root = match entries.pop_front() {
             Some(e) => e,
-            None => return None
+            None => return None,
         };
 
         while !entries.is_empty() {
             let mut node = entries.pop_front().unwrap();
 
             if node.level > root.level {
-                match Self::build_node(&mut entries) {
+                match Self::build_node(entries) {
                     Some(child) => {
                         if node.level >= child.level {
                             entries.push_front(child);
@@ -91,7 +93,7 @@ impl<'a> TableOfContents {
                         } else {
                             node.children.push(child)
                         }
-                    },
+                    }
                     None => (),
                 }
 
@@ -104,15 +106,15 @@ impl<'a> TableOfContents {
             }
         }
 
-        return Some(root);
+        Some(root)
     }
 }
 
-pub struct HeadingRenderer { }
+pub struct HeadingRenderer {}
 
 impl HeadingRenderer {
     pub fn new() -> Self {
-        HeadingRenderer {  }
+        HeadingRenderer {}
     }
 }
 
@@ -124,17 +126,22 @@ impl HeadingAdapter for HeadingRenderer {
         _sourcepos: Option<comrak::nodes::Sourcepos>,
     ) -> std::io::Result<()> {
         let slug = slugify(&heading.content);
-        let tag = format!("
+        let tag = format!(
+            "
           <a class=\"no-underline\" href=\"#{}\">
               <h{} id=\"{}\" class=\"group relative\">
               <span class=\"hidden group-hover:inline absolute -left-8\">#</span>
-        ", slug, heading.level, slug);
+        ",
+            slug, heading.level, slug
+        );
         output.write(tag.as_bytes()).unwrap();
         Ok(())
     }
 
     fn exit(&self, output: &mut dyn std::io::Write, heading: &HeadingMeta) -> std::io::Result<()> {
-        output.write(format!("</h{}></a>", heading.level).as_bytes()).unwrap();
+        output
+            .write(format!("</h{}></a>", heading.level).as_bytes())
+            .unwrap();
         Ok(())
     }
 }
@@ -146,20 +153,29 @@ pub struct PostCompiler<'a> {
 }
 
 impl<'a> PostCompiler<'a> {
-    pub fn new(arena: Arena<AstNode<'a>>, options: &'a ComrakOptions, plugins: &'a ComrakPlugins<'a>) -> PostCompiler<'a> {
-        Self { arena, options, plugins  }
+    pub fn new(
+        arena: Arena<AstNode<'a>>,
+        options: &'a ComrakOptions,
+        plugins: &'a ComrakPlugins<'a>,
+    ) -> PostCompiler<'a> {
+        Self {
+            arena,
+            options,
+            plugins,
+        }
     }
 
     pub fn to_ast(&'a self, content: &str) -> &'a AstNode<'a> {
         comrak::parse_document(&self.arena, content, self.options)
     }
 
-    // TODO: reimplement this, now adding correct anchors to headings, 
+    // TODO: reimplement this, now adding correct anchors to headings,
     // parsing images correctly and handling codeblocks better (maybe use
     // treesitter for it)
     pub fn ast_to_html(&'a self, ast: &'a AstNode<'a>) -> String {
         let mut output_buffer = Vec::new();
-        comrak::format_html_with_plugins(ast, self.options, &mut output_buffer, self.plugins).unwrap();
+        comrak::format_html_with_plugins(ast, self.options, &mut output_buffer, self.plugins)
+            .unwrap();
         String::from_utf8(output_buffer).unwrap()
     }
 }
@@ -248,12 +264,16 @@ pub struct PublishableBlogPost<'a> {
     pub filename: PathBuf,
     pub description: String,
     pub rendered_html: String,
+    pub images: Vec<PostImage>,
 }
 
 pub fn prepare_for_publish<'a>(
     p: &'a BlogPost<'a>,
     compiler: &'a PostCompiler<'a>,
 ) -> PublishableBlogPost<'a> {
+    let images = map_images(p.ast);
+
+    // ^ Operations that mutate AST nodes should be done before converting to HTML
     let rendered_html = compiler.ast_to_html(p.ast);
 
     let metadata = &p.metadata;
@@ -273,32 +293,29 @@ pub fn prepare_for_publish<'a>(
         filename,
         description,
         rendered_html,
+        images,
     }
 }
 
 fn build_description<'a>(ast: &'a AstNode<'a>) -> String {
     use comrak::nodes::NodeValue::*;
 
-    for node in ast.borrow().traverse() {
+    for node in ast.traverse() {
         match node {
             comrak::arena_tree::NodeEdge::Start(nv) => {
-                if let Paragraph = nv.borrow().data.borrow().value {
+                if let Paragraph = nv.data.borrow().value {
                     let mut buffer = String::new();
 
-                    for c in nv.borrow().children() {
+                    for c in nv.children() {
                         if let Text(ref t) = c.data.borrow().value {
                             buffer.push_str(t);
                             buffer.push(' ');
                         }
                     }
 
-                    let description = buffer
-                        .split(" ")
-                        .take(25)
-                        .collect::<Vec<&str>>()
-                        .join(" ");
+                    let description = buffer.split(' ').take(25).collect::<Vec<&str>>().join(" ");
 
-                    return format!("{}...", description)
+                    return format!("{}...", description);
                 }
             }
             comrak::arena_tree::NodeEdge::End(_nv) => continue,
@@ -313,18 +330,16 @@ fn reading_time<'a>(ast: &'a AstNode<'a>) -> u16 {
     let avg_words_per_minute = 225.0;
     let mut words_count = 0;
 
-    for node in ast.borrow().traverse() {
+    for node in ast.traverse() {
         match node {
-            comrak::arena_tree::NodeEdge::Start(nv) => {
-                match nv.borrow().data.borrow().value {
-                    Text(ref t) => {
-                        words_count += wordcount(&t).unwrap();
-                    },
-                    CodeBlock(ref b) => {
-                        words_count += wordcount(&b.literal).unwrap();
-                    }
-                    _ => continue,
+            comrak::arena_tree::NodeEdge::Start(nv) => match nv.data.borrow().value {
+                Text(ref t) => {
+                    words_count += wordcount(t).unwrap();
                 }
+                CodeBlock(ref b) => {
+                    words_count += wordcount(&b.literal).unwrap();
+                }
+                _ => continue,
             },
             _ => continue,
         }
@@ -332,6 +347,53 @@ fn reading_time<'a>(ast: &'a AstNode<'a>) -> u16 {
 
     let average = (words_count as f64) / avg_words_per_minute;
     average.ceil() as u16
+}
+
+#[derive(Debug)]
+pub struct PostImage {
+    /// The path where an image can be found, relative to the blog's root
+    original_path: String,
+
+    /// The final path where the processed image will be found in the blog
+    /// (e.g: /img/my-tour.png)
+    final_path: String,
+}
+
+// TODO: Support image resizing and optimization (webp, responsive images)
+
+// Walks the markdown AST and maps the images referenced in a post to the path
+// they should have when publishing the blog
+// This mutates the image nodes in the AST, changing their URL to their final
+// path in the dist directory
+fn map_images<'a>(ast: &'a AstNode<'a>) -> Vec<PostImage> {
+    use comrak::nodes::NodeValue::*;
+
+    // TODO: deduplicate images with the same name
+
+    let mut post_images = Vec::new();
+
+    for node in ast.borrow().traverse() {
+        match node {
+            comrak::arena_tree::NodeEdge::Start(nv) => match nv.data.borrow_mut().value {
+                Image(ref mut i) => {
+                    let path = Path::new(&i.url);
+                    let filename = path.file_name().unwrap();
+                    let final_path = Path::new("img").join(filename).to_str().unwrap().to_owned();
+
+                    post_images.push(PostImage {
+                        original_path: i.url.to_owned(),
+                        final_path: final_path.to_owned(),
+                    });
+
+                    i.url = final_path;
+                }
+                _ => continue,
+            },
+            _ => continue,
+        }
+    }
+
+    post_images
 }
 
 pub fn build_blog_post<'a>(
@@ -352,14 +414,14 @@ pub fn build_blog_post<'a>(
         }
     };
 
-    let toc = TableOfContents::from_ast(&ast);
-    let reading_time = reading_time(&ast);
+    let toc = TableOfContents::from_ast(ast);
+    let reading_time = reading_time(ast);
 
     Ok(BlogPost {
+        ast, // TODO: figure out how to have this mutable AST reference
         raw_content: content.to_owned(),
         reading_time,
         toc,
-        ast,
         metadata,
     })
 }

@@ -6,16 +6,14 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use comrak::{
-    plugins::syntect::SyntectAdapter, Arena, ComrakExtensionOptions, ComrakOptions, ComrakPlugins,
-};
+use comrak::{Arena, ComrakExtensionOptions, ComrakOptions, ComrakPlugins};
 use crossbeam_channel::{unbounded, Receiver};
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use pageturtle_core::{
     self,
     blog::{
-        build_blog_post, prepare_for_publish, BlogConfiguration, BlogPost, PostCompiler,
-        PublishableBlogPost, HeadingRenderer,
+        build_blog_post, prepare_for_publish, BlogConfiguration, BlogPost, HeadingRenderer,
+        PostCompiler, PublishableBlogPost,
     },
     feed, rendering,
 };
@@ -137,7 +135,7 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
     let mut plugins = ComrakPlugins::default();
     plugins.render.heading_adapter = Some(&adapter);
 
-    let compiler = PostCompiler::new(arena, &options, &plugins);
+    let compiler = PostCompiler::new(arena, options, &plugins);
 
     let mut posts: Vec<BlogPost> = vec![];
     let mut failures: Vec<BuildPostError> = vec![];
@@ -204,6 +202,18 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
         // println!("writing file {:?}", path);
         let page = rendering::render_post_page(post, config);
         fs::write(path, page).unwrap();
+    }
+
+    // write images
+    let img_dir = output_dir.join("img");
+    fs::create_dir_all(img_dir).unwrap();
+
+    for post in &publishable_posts {
+        for img in &post.images {
+            // TODO: resolve original post path relative to blog root when 
+            // creating its struct
+            // fs::copy(from, to)
+        }
     }
 
     // write rss feed
