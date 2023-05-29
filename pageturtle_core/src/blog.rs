@@ -232,6 +232,9 @@ pub struct BlogPostMetadata {
     pub tags: Vec<String>,
 
     #[serde(default)]
+    pub draft: bool,
+
+    #[serde(default)]
     pub table_of_contents: bool,
 }
 

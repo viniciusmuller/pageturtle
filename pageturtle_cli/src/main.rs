@@ -182,6 +182,7 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
 
     let mut publishable_posts: Vec<PublishableBlogPost> = posts
         .iter()
+        .filter(|(_, post)| !post.metadata.draft)
         .map(|(path, post)| prepare_for_publish(post, path, &compiler))
         .collect();
 
@@ -197,19 +198,18 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
     let tags_path = output_dir.join("tags.html");
     fs::write(tags_path, tags_html).unwrap();
 
+    // setup images directory
+    let img_dir = output_dir.join("img");
+    fs::create_dir_all(&img_dir).unwrap();
+
     // write posts
     for post in &publishable_posts {
         let path = output_dir.join(&post.output_filename);
         // println!("writing file {:?}", path);
         let page = rendering::render_post_page(post, config);
         fs::write(path, page).unwrap();
-    }
 
-    // write images
-    let img_dir = output_dir.join("img");
-    fs::create_dir_all(&img_dir).unwrap();
-
-    for post in &publishable_posts {
+        // Copy post images, if any
         for img in &post.images {
             let post_parent = post.filepath.parent().unwrap().join(&img.original_path);
             match fs::canonicalize(post_parent) {
