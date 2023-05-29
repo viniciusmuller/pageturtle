@@ -31,6 +31,8 @@ struct BuildPostError {
     message: String,
 }
 
+const CONFIG_FILE: &'static str = "pageturtle.toml";
+
 #[derive(Debug, Parser)]
 #[clap(author, version, about, long_about = None)]
 #[clap(propagate_version = true)]
@@ -238,7 +240,7 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
 }
 
 fn init_blog(target_directory: &Path) -> Result<(), String> {
-    let config = include_bytes!("other/config.toml");
+    let config = include_bytes!("other/pageturtle.toml");
     let getting_started = include_bytes!("other/getting_started.md");
 
     if target_directory.exists() && !target_directory.is_dir() {
@@ -249,7 +251,7 @@ fn init_blog(target_directory: &Path) -> Result<(), String> {
         fs::create_dir_all(target_directory).unwrap();
     }
 
-    fs::write(target_directory.join("config.toml"), config).unwrap();
+    fs::write(target_directory.join(CONFIG_FILE), config).unwrap();
 
     let posts_dir = target_directory.join("posts");
     fs::create_dir_all(&posts_dir).unwrap();
@@ -394,6 +396,7 @@ fn check_allowed_filetype(extension: &str) -> bool {
 }
 
 fn read_config(blog_root: &Path) -> BlogConfiguration {
-    let config_file = fs::read_to_string(blog_root.join("config.toml")).unwrap();
+    // TODO: nice error messages!!
+    let config_file = fs::read_to_string(blog_root.join(CONFIG_FILE)).unwrap();
     BlogConfiguration::from_toml(&config_file).unwrap()
 }
