@@ -132,7 +132,7 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
         ..ComrakOptions::default()
     };
 
-    let adapter = HeadingRenderer::new();
+    let adapter = HeadingRenderer::default();
     let mut plugins = ComrakPlugins::default();
     plugins.render.heading_adapter = Some(&adapter);
 
@@ -211,21 +211,15 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
 
     for post in &publishable_posts {
         for img in &post.images {
-            // TODO: resolve original post path relative to blog root when
-            // creating its struct
-
             let post_parent = post.filepath.parent().unwrap().join(&img.original_path);
-            dbg!(&post_parent, &img);
-
             match fs::canonicalize(post_parent) {
                 Ok(from) => {
-                    dbg!(&from);
                     let to = img_dir.join(&img.final_path);
-                    dbg!(&to);
                     fs::copy(from, to).unwrap();
                 }
                 Err(e) => {
                     dbg!(e);
+                    // TODO: handle properly
                 }
             };
         }

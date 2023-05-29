@@ -2,7 +2,7 @@ use askama::Template;
 
 use crate::{
     blog::{
-        BlogConfiguration, BlogPost, PublishableBlogPost, TableOfContents, TableOfContentsEntry,
+        BlogConfiguration, PublishableBlogPost, TableOfContents, TableOfContentsEntry,
     },
     feed::Feed,
 };
@@ -38,7 +38,7 @@ struct TocEntryTemplate {
     children: Vec<TocEntryTemplate>,
 }
 
-impl<'a> TocEntryTemplate {
+impl TocEntryTemplate {
     fn from_toc_entry(entry: &TableOfContentsEntry) -> TocEntryTemplate {
         let children = entry
             .children
@@ -60,7 +60,7 @@ struct TocTemplate {
     entries: Vec<TocEntryTemplate>,
 }
 
-impl<'a> TocTemplate {
+impl TocTemplate {
     pub fn from_toc(toc: &TableOfContents) -> TocTemplate {
         let mut templates = Vec::new();
 

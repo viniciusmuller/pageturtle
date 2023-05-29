@@ -1,7 +1,7 @@
+use core::panic;
 use std::{
-    borrow::{Borrow, BorrowMut},
-    collections::{HashMap, VecDeque},
-    dbg,
+    borrow::Borrow,
+    collections::VecDeque,
     path::{Path, PathBuf},
 };
 
@@ -84,17 +84,14 @@ impl<'a> TableOfContents {
             let mut node = entries.pop_front().unwrap();
 
             if node.level > root.level {
-                match Self::build_node(entries) {
-                    Some(child) => {
-                        if node.level >= child.level {
-                            entries.push_front(child);
-                            root.children.push(node);
-                            return Some(root);
-                        } else {
-                            node.children.push(child)
-                        }
+                if let Some(child) = Self::build_node(entries) {
+                    if node.level >= child.level {
+                        entries.push_front(child);
+                        root.children.push(node);
+                        return Some(root);
+                    } else {
+                        node.children.push(child)
                     }
-                    None => (),
                 }
 
                 root.children.push(node.to_owned());
@@ -113,8 +110,14 @@ impl<'a> TableOfContents {
 pub struct HeadingRenderer {}
 
 impl HeadingRenderer {
-    pub fn new() -> Self {
+    fn new() -> Self {
         HeadingRenderer {}
+    }
+}
+
+impl Default for HeadingRenderer {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -134,13 +137,13 @@ impl HeadingAdapter for HeadingRenderer {
         ",
             slug, heading.level, slug
         );
-        output.write(tag.as_bytes()).unwrap();
+        output.write_all(tag.as_bytes()).unwrap();
         Ok(())
     }
 
     fn exit(&self, output: &mut dyn std::io::Write, heading: &HeadingMeta) -> std::io::Result<()> {
         output
-            .write(format!("</h{}></a>", heading.level).as_bytes())
+            .write_all(format!("</h{}></a>", heading.level).as_bytes())
             .unwrap();
         Ok(())
     }
@@ -237,7 +240,25 @@ impl BlogPostMetadata {
         let date = self.date;
         let (_is_common_era, year) = date.year_ce();
 
-        format!("{}/{:02}/{:02}", year, date.month(), date.day(),)
+        format!("{} {}, {}", format_month(date.month()), date.day(), year)
+    }
+}
+
+fn format_month(month: u32) -> &'static str {
+    match month {
+        1 => "January",
+        2 => "February",
+        3 => "March",
+        4 => "April",
+        5 => "May",
+        6 => "June",
+        7 => "July",
+        8 => "August",
+        9 => "September",
+        10 => "October",
+        11 => "November",
+        12 => "December",
+        n => panic!("unknown month: {}", n)
     }
 }
 
