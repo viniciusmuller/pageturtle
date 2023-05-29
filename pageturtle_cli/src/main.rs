@@ -137,7 +137,7 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
 
     let compiler = PostCompiler::new(arena, options, &plugins);
 
-    let mut posts: Vec<BlogPost> = vec![];
+    let mut posts: Vec<(PathBuf, BlogPost)> = vec![];
     let mut failures: Vec<BuildPostError> = vec![];
     let posts_dir = blog_root.join("posts");
 
@@ -162,7 +162,7 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
         let content = fs::read_to_string(filepath).unwrap();
 
         match build_blog_post(&content, &compiler) {
-            Ok(post) => posts.push(post),
+            Ok(post) => posts.push((filepath.to_owned(), post)),
             Err(e) => failures.push(BuildPostError {
                 filepath: filepath.into(),
                 content,
@@ -181,7 +181,7 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
 
     let mut publishable_posts: Vec<PublishableBlogPost> = posts
         .iter()
-        .map(|p| prepare_for_publish(p, &compiler))
+        .map(|(path, post)| prepare_for_publish(post, path, &compiler))
         .collect();
 
     publishable_posts.sort_by(|a, b| b.post.metadata.date.cmp(&a.post.metadata.date));
@@ -192,13 +192,13 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
     fs::write(path, index_html).unwrap();
 
     // create tags page
-    let tags_html = rendering::render_tags_page(&posts, config);
+    let tags_html = rendering::render_tags_page(&publishable_posts, config);
     let tags_path = output_dir.join("tags.html");
     fs::write(tags_path, tags_html).unwrap();
 
     // write posts
     for post in &publishable_posts {
-        let path = output_dir.join(&post.filename);
+        let path = output_dir.join(&post.output_filename);
         // println!("writing file {:?}", path);
         let page = rendering::render_post_page(post, config);
         fs::write(path, page).unwrap();
@@ -206,13 +206,27 @@ fn build(blog_root: &Path, output_directory: &Path, config: &BlogConfiguration) 
 
     // write images
     let img_dir = output_dir.join("img");
-    fs::create_dir_all(img_dir).unwrap();
+    fs::create_dir_all(&img_dir).unwrap();
 
     for post in &publishable_posts {
         for img in &post.images {
-            // TODO: resolve original post path relative to blog root when 
+            // TODO: resolve original post path relative to blog root when
             // creating its struct
-            // fs::copy(from, to)
+
+            let post_parent = post.filepath.parent().unwrap().join(&img.original_path);
+            dbg!(&post_parent, &img);
+
+            match fs::canonicalize(post_parent) {
+                Ok(from) => {
+                    dbg!(&from);
+                    let to = img_dir.join(&img.final_path);
+                    dbg!(&to);
+                    fs::copy(from, to).unwrap();
+                }
+                Err(e) => {
+                    dbg!(e);
+                }
+            };
         }
     }
 

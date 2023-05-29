@@ -38,7 +38,7 @@ pub fn build_feed<'a>(
 }
 
 fn to_entry<'a>(post: &'a PublishableBlogPost<'a>, config: &'a BlogConfiguration) -> FeedEntry<'a> {
-    let filename = post.filename.to_str().unwrap();
+    let filename = post.output_filename.to_str().unwrap();
     let url = format!("{}/{}", config.base_url, filename);
 
     FeedEntry {

@@ -261,7 +261,8 @@ pub struct CompilePostError {
 #[derive(Debug)]
 pub struct PublishableBlogPost<'a> {
     pub post: &'a BlogPost<'a>,
-    pub filename: PathBuf,
+    pub output_filename: PathBuf,
+    pub filepath: &'a Path,
     pub description: String,
     pub rendered_html: String,
     pub images: Vec<PostImage>,
@@ -269,6 +270,7 @@ pub struct PublishableBlogPost<'a> {
 
 pub fn prepare_for_publish<'a>(
     p: &'a BlogPost<'a>,
+    filepath: &'a Path,
     compiler: &'a PostCompiler<'a>,
 ) -> PublishableBlogPost<'a> {
     let images = map_images(p.ast);
@@ -290,7 +292,8 @@ pub fn prepare_for_publish<'a>(
 
     PublishableBlogPost {
         post: p,
-        filename,
+        filepath,
+        output_filename: filename,
         description,
         rendered_html,
         images,
@@ -352,11 +355,11 @@ fn reading_time<'a>(ast: &'a AstNode<'a>) -> u16 {
 #[derive(Debug)]
 pub struct PostImage {
     /// The path where an image can be found, relative to the blog's root
-    original_path: String,
+    pub original_path: String,
 
     /// The final path where the processed image will be found in the blog
     /// (e.g: /img/my-tour.png)
-    final_path: String,
+    pub final_path: PathBuf,
 }
 
 // TODO: Support image resizing and optimization (webp, responsive images)
@@ -378,14 +381,19 @@ fn map_images<'a>(ast: &'a AstNode<'a>) -> Vec<PostImage> {
                 Image(ref mut i) => {
                     let path = Path::new(&i.url);
                     let filename = path.file_name().unwrap();
-                    let final_path = Path::new("img").join(filename).to_str().unwrap().to_owned();
+                    let final_path: PathBuf = filename.to_owned().into();
 
                     post_images.push(PostImage {
                         original_path: i.url.to_owned(),
                         final_path: final_path.to_owned(),
                     });
 
-                    i.url = final_path;
+                    i.url = Path::new("/")
+                        .join("img")
+                        .join(filename)
+                        .into_os_string()
+                        .into_string()
+                        .unwrap();
                 }
                 _ => continue,
             },
