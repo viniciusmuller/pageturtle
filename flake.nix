@@ -12,6 +12,12 @@
         pkgs = import nixpkgs { inherit system; };
       in
       {
+        defaultPackage = pkgs.rustPlatform.buildRustPackage {
+          pname = "pageturtle";
+          version = "0.1.1";
+          src = pkgs.lib.cleanSource ./.;
+          cargoHash = "sha256-aml6dyRSsG/Dq5dck0WRUS6EZb24qIqFbxDHxpPFijo=";
+        };
         devShell = with pkgs; mkShell {
           buildInputs = [ 
             cargo

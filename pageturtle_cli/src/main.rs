@@ -41,6 +41,7 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Starts the development server
     Dev {
         #[clap(short, long, default_value_t = String::from("."), forbid_empty_values = true)]
         /// Blog directory
