@@ -20,7 +20,9 @@ cargo build --release
 - [X] [Generate RSS feeds](https://validator.w3.org/feed/check.cgi)
 - [X] Great CLI interface
 - [ ] Nice error messages
-- [ ] Handling and optimizing images
+- [X] Handling images
+- [ ] Automatically optimize images
 - [X] Automatically build table of contents
 - [X] Development server and live reload
 - [ ] Incremental compilation on development server
+- [ ] Syntax highlighting using tree-sitter
